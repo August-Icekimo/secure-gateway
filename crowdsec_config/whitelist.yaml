@@ -1,0 +1,11 @@
+name: general/whitelist
+description: "Whitelist private IP ranges"
+whitelist:
+  reason: "private-ip"
+  ip:
+    - "127.0.0.1"
+    - "::1"
+  cidr:
+    - "192.168.0.0/16"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"

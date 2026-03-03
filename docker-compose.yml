@@ -1,0 +1,108 @@
+version: '3'
+
+
+services:
+ # --- 1. 超級閘道器 Caddy ---
+ caddy:
+   build: ./build
+   container_name: secure-gateway
+   restart: unless-stopped
+   # 使用 host 網路或 macvlan 以獲取獨立 IP (推薦 macvlan 以避免與 DSM 衝突)
+   # 修正重點：Caddy 必須同時加入 macvlan (對外) 與 internal_bridge (對內)，才能解析內部容器名稱
+   networks:
+     macvlan_net:
+       ipv4_address: 192.168.1.5 # CHANGE_THIS_TO_YOUR_PLANNED_IP
+     internal_bridge:
+   environment:
+     - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+     - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+     - AWS_HOSTED_ZONE_ID=${AWS_HOSTED_ZONE_ID}
+     # [新增] Google OpenID 認證所需變數
+     - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+     - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+     - JWT_SHARED_KEY=${JWT_SHARED_KEY}
+     # [新增] 內部服務 IP 變數
+     - SSH_SERVER_IP=${SSH_SERVER_IP}
+     - PVE_SERVER_IP=${PVE_SERVER_IP}
+     - DOMAIN_NAME=${DOMAIN_NAME}
+   volumes:
+     - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
+     - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
+     - caddy_data:/data
+     - caddy_logs:/var/log/caddy
+   depends_on:
+     - crowdsec
+
+
+ # --- 2. 威脅防禦 CrowdSec ---
+ crowdsec:
+   image: crowdsecurity/crowdsec
+   container_name: crowdsec
+   restart: unless-stopped
+   environment:
+     - COLLECTIONS=crowdsecurity/caddy crowdsecurity/http-cve
+   volumes:
+     - crowdsec_db:/var/lib/crowdsec/data
+     - ./crowdsec_config:/etc/crowdsec
+     - caddy_logs:/var/log/caddy:ro # 讀取 Caddy 的 Log
+   networks:
+     - internal_bridge
+
+
+ # --- 3. Guacamole 核心 (Web App) ---
+ guacamole:
+   image: guacamole/guacamole
+   container_name: guacamole
+   restart: unless-stopped
+   environment:
+     - GUACD_HOSTNAME=guacd
+     - POSTGRES_HOSTNAME=postgres
+     - POSTGRES_DATABASE=guacamole_db
+     - POSTGRES_USER=guacamole_user
+     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+     - TOTP_ENABLED=true # 啟用 2FA (需配合 extensions)
+   volumes:
+     - ./guac_extensions:/opt/guacamole/extensions
+   depends_on:
+     - guacd
+     - postgres
+   networks:
+     - internal_bridge
+
+
+ # --- 4. Guacd (Protocol Proxy) ---
+ guacd:
+   image: guacamole/guacd
+   container_name: guacd
+   restart: unless-stopped
+   networks:
+     - internal_bridge
+
+
+ # --- 5. Postgres (Database) ---
+ postgres:
+   image: postgres:15-alpine
+   container_name: guac_postgres
+   restart: unless-stopped
+   environment:
+     - POSTGRES_USER=guacamole_user
+     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+     - POSTGRES_DB=guacamole_db
+   volumes:
+     - postgres_data:/var/lib/postgresql/data
+   networks:
+     - internal_bridge
+
+
+networks:
+ macvlan_net:
+   external: true
+   name: macvlan_net # 需事先建立
+ internal_bridge:
+   driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_logs:
+  crowdsec_db:
+  postgres_data:
