@@ -181,11 +181,14 @@ docker network create -d macvlan \
 
 > ⚠️ **Known Limitation:** With Macvlan, the NAS host itself cannot directly reach the Caddy container's IP. This is a Linux kernel Macvlan restriction. To access Caddy from the NAS host, you need either: (1) Router-level hairpin NAT, or (2) an additional `macvlan` bridge interface on the host. Normal LAN clients are unaffected.
 
-### 2. 設定環境變數 (.env) / Set Environment Variables (.env)
+### 2. 設定環境變數 / Set Environment Variables
 
-在專案根目錄建立 `.env` 檔案，填入稍早取得的資訊：
+此專案依賴多個環境變數，您可以透過 **Synology Container Manager 的網頁介面 (Environment)** 直接注入，或是建立一個傳統的 `.env` 檔案。
 
-Create a .env file in the project root directory and fill in the information obtained earlier:
+This project relies on several environment variables. You can inject them directly via the **Synology Container Manager Web UI (Environment)**, or create a traditional `.env` file.
+
+請準備好下列變數清單：
+Please prepare the following variables:
 
 ```env
 AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID_NO_TYPOS_PLEASE
