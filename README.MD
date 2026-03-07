@@ -11,6 +11,7 @@ This is a comprehensive security gateway project deployed on Synology DSM Contai
 This project integrates the following core components:
 
 - **Caddy (Custom Build):**
+    - **Networking:** Listens on host ports 8080 (HTTP) and 8443 (HTTPS). Router NAT forwards external :80/:443 to NAS:8080/8443.
     - **Layer 4 Proxy:** 原本負責 `Port 443` 的 SSH 與 HTTPS 流量分流，但目前因模組匹配問題預設停用 (Commented out)。 
     
           Originally responsible for `Port 443` SSH and HTTPS traffic multiplexing, currently disabled by default due to module matching issue.
@@ -151,35 +152,18 @@ Before filling in the `.env` file, please refer to the following steps to obtain
 
 ## 🚀 部署前手動準備步驟 / Pre-deployment Manual Steps
 
-### 1. 建立 Macvlan 網路 (關鍵) / Create Macvlan Network (Critical)
+### 1. 路由器 Port Forward 設定 / Router Port Forward Setup
 
-由於 Caddy 需要佔用 Port 80/443，為避免與 DSM 衝突，需建立 Macvlan 網路給予獨立 IP。
+由於 Caddy 監聽主機的 8080/8443 port，需在路由器設定 Port Forward，將對外流量導入 NAS。
 
-Since Caddy needs to occupy Port 80/443, to avoid conflict with DSM, a Macvlan network must be created to assign an independent IP.
+Since Caddy listens on host ports 8080/8443, configure Port Forward on your router to direct incoming traffic to the NAS.
 
-請 SSH 進入 NAS 執行：
+| 外部 Port / External Port | 內部目標 / Internal Target | 說明 / Note |
+|---|---|---|
+| 443 (TCP) | NAS-IP : 8443 | HTTPS main traffic |
+| 80 (TCP) | NAS-IP : 8080 | HTTP → Caddy redirects to 443 |
 
-Please SSH into the NAS and execute:
-
-```bash
-# 假設您的主介面是 eth0 (或是 ovs_eth0)，請依實際情況調整
-# Assuming your main interface is eth0 (or ovs_eth0), please adjust accordingly
-# subnet: 您的區網網段
-# subnet: Your LAN subnet
-# gateway: 您的路由器 IP
-# gateway: Your router IP
-# ip-range: 希望分配給 Docker 的 IP 範圍 (避免與 DHCP 衝突)
-# ip-range: IP range to assign to Docker (avoid conflict with DHCP)
-
-docker network create -d macvlan \
-  --subnet=192.168.1.0/24 \
-  --gateway=192.168.1.1 \
-  --ip-range=192.168.1.5/32 \
-  -o parent=eth0 \
-  macvlan_net
-```
-
-> ⚠️ **Known Limitation:** With Macvlan, the NAS host itself cannot directly reach the Caddy container's IP. This is a Linux kernel Macvlan restriction. To access Caddy from the NAS host, you need either: (1) Router-level hairpin NAT, or (2) an additional `macvlan` bridge interface on the host. Normal LAN clients are unaffected.
+> ℹ️ DSM nginx continues to own ports 80/443 on the host. There is no conflict because Caddy binds to 8080/8443 externally and Docker maps them internally to Caddy's standard 80/443.
 
 ### 2. 設定環境變數 / Set Environment Variables
 
@@ -189,6 +173,8 @@ This project relies on several environment variables. You can inject them direct
 
 請準備好下列變數清單：
 Please prepare the following variables:
+
+> Note: `PVE_SERVER_IP` and `SSH_SERVER_IP` should reflect the actual LAN IP of the target machine.
 
 ```env
 AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID_NO_TYPOS_PLEASE

@@ -72,7 +72,15 @@ nc -z -w 2 $DSM_IP 5000
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}[OK] Connected to DSM ($DSM_IP:5000)${NC}"
 else
-    echo -e "${RED}[FAIL] Cannot connect to DSM ($DSM_IP:5000). Check Macvlan routing or IP firewall.${NC}"
+    echo -e "${RED}[FAIL] Cannot connect to DSM ($DSM_IP:5000). Check Host routing or IP firewall.${NC}"
+fi
+
+# 檢查 Caddy 自身 Port 綁定
+nc -z -w 2 127.0.0.1 80
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}[OK] Caddy is listening on :80${NC}"
+else
+    echo -e "${RED}[FAIL] Caddy is NOT listening on :80${NC}"
 fi
 
 # 檢查 Google (驗證對外網路)
