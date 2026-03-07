@@ -25,6 +25,7 @@ services:
      - SSH_SERVER_IP=${SSH_SERVER_IP}
      - PVE_SERVER_IP=${PVE_SERVER_IP}
      - DOMAIN_NAME=${DOMAIN_NAME}
+     - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf

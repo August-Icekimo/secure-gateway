@@ -11,9 +11,9 @@ This is a comprehensive security gateway project deployed on Synology DSM Contai
 This project integrates the following core components:
 
 - **Caddy (Custom Build):**
-    - **Layer 4 Proxy:** 負責 `Port 443` 的 SSH 與 HTTPS 流量分流 (Multiplexing). 
-
-          Responsible for `Port 443` SSH and HTTPS traffic multiplexing.
+    - **Layer 4 Proxy:** 原本負責 `Port 443` 的 SSH 與 HTTPS 流量分流，但目前因模組匹配問題預設停用 (Commented out)。 
+    
+          Originally responsible for `Port 443` SSH and HTTPS traffic multiplexing, currently disabled by default due to module matching issue.
     - **Layer 7 Reverse Proxy:** 負責 Web 服務反向代理與 SSL 卸載 (SSL Termination). 
 
           Responsible for Web service reverse proxy and SSL termination.
@@ -179,6 +179,8 @@ docker network create -d macvlan \
   macvlan_net
 ```
 
+> ⚠️ **Known Limitation:** With Macvlan, the NAS host itself cannot directly reach the Caddy container's IP. This is a Linux kernel Macvlan restriction. To access Caddy from the NAS host, you need either: (1) Router-level hairpin NAT, or (2) an additional `macvlan` bridge interface on the host. Normal LAN clients are unaffected.
+
 ### 2. 設定環境變數 (.env) / Set Environment Variables (.env)
 
 在專案根目錄建立 `.env` 檔案，填入稍早取得的資訊：
@@ -196,6 +198,7 @@ POSTGRES_PASSWORD=YOUR_DB_PASSWORD_STRONGER_THAN_YOUR_COFFEE
 SSH_SERVER_IP=192.168.1.10
 PVE_SERVER_IP=192.168.1.10
 DOMAIN_NAME=yourdomain.com
+CROWDSEC_BOUNCER_KEY=YOUR_CROWDSEC_BOUNCER_API_KEY
 ```
 
 ### 3. 其他檔案準備/ Other File Preparation
@@ -279,8 +282,8 @@ docker exec -it secure-gateway /usr/bin/initCheck.sh
 
 ```bash
 docker exec -it crowdsec cscli bouncers add caddy-bouncer
-# 將產生的 API Key 填回 Caddyfile 的 crowdsec 區塊，並重啟 Caddy
-# Fill the generated API Key back into the crowdsec block in Caddyfile and restart Caddy
+# 將產生的 API Key 填回 `.env` 中的 `CROWDSEC_BOUNCER_KEY`，並重啟 Caddy
+# Fill the generated API Key back into `.env` as `CROWDSEC_BOUNCER_KEY` and restart Caddy
 ```
 
 ### Guacamole 資料庫初始化 (首次)/ Guacamole Database Initialization (First Time)
