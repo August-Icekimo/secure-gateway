@@ -10,84 +10,99 @@
 
     # 設定全域選項，例如 ACME Email (選填)
     # email your-email@example.com
-}
 
-# --- Security 全域配置 ---
-security {
-    # Google OAuth 設定
-    oauth identity provider google {
-        realm google
-        driver google
-        client_id {$GOOGLE_CLIENT_ID} 
-        client_secret {$GOOGLE_CLIENT_SECRET} 
-        # domain_name auth.{$DOMAIN_NAME}     # 建議設定，避免 Cookie 跨域問題
-    }
+    # --- Security 全域配置 ---
+    security {
+        # Google OAuth 設定
+        oauth identity provider google {
+            realm google
+            driver google
+            client_id {$GOOGLE_CLIENT_ID} 
+            client_secret {$GOOGLE_CLIENT_SECRET} 
+            # domain_name auth.{$DOMAIN_NAME}     # 建議設定，避免 Cookie 跨域問題
+        }
 
-    authentication portal my_portal {
-        crypto default token lifetime 3600
-        crypto key sign-verify {$JWT_SHARED_KEY} 
-        
-        enable identity provider google
-        
-        # 設定 Cookie 網域 (請修改為您的網域)
-        # cookie domain {$DOMAIN_NAME}
-        
-        ui {
-            links {
-                "Guacamole" "/guacamole/" icon "las la-desktop"
-                "Proxmox" "https://pve.{$DOMAIN_NAME}" icon "las la-server"
+        authentication portal my_portal {
+            crypto default token lifetime 3600
+            crypto key sign-verify {$JWT_SHARED_KEY} 
+            
+            enable identity provider google
+            
+            # 設定 Cookie 網域 (請修改為您的網域)
+            # cookie domain {$DOMAIN_NAME}
+            
+            ui {
+                links {
+                    "Guacamole" "/guacamole/" icon "las la-desktop"
+                    "Proxmox" "https://pve.{$DOMAIN_NAME}" icon "las la-server"
+                }
+            }
+
+            # 自動將 Google 驗證過的使用者賦予 User 角色
+            transform user {
+                match realm google
+                action add role authp/user
             }
         }
 
-        # 自動將 Google 驗證過的使用者賦予 User 角色
-        transform user {
-            match realm google
-            action add role authp/user
-        }
-    }
-
-    # 授權策略
-    authorization policy google_policy {
-        set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
-        
-        # 允許特定 Email
-        allow email your.email@gmail.com
-        
-        # 或者允許特定網域 (例如公司信箱)
-        # allow email domain yourcompany.com
-        
+        # 授權策略
+        authorization policy google_policy {
+            set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
+            
+            # 允許特定 Email
+            allow email your.email@gmail.com
+            
+            # 或者允許特定網域 (例如公司信箱)
+            # allow email domain yourcompany.com
+            
+            # 預設允許所有通過驗證的使用者 (若不限制特定 Email)
         # 預設允許所有通過驗證的使用者 (若不限制特定 Email)
-        allow roles authp/user
+            allow roles authp/user
+        }
+    }
+
+    # --- Layer 4 流量分流 (Port 443) ---
+    # layer4 {
+    #     :443 {
+    #         @ssh {
+    #             match ssh
+    #         }
+    #         route @ssh {
+    #             proxy {$SSH_SERVER_IP}:22 
+    #         }
+    # 
+    #         route {
+    #             proxy 127.0.0.1:8443
+    #         }
+    #     }
+    # }
+
+    # 啟用 CrowdSec 全域應用配置
+    crowdsec {
+        api_key {$CROWDSEC_BOUNCER_KEY}
+        api_url http://crowdsec:8080
     }
 }
 
-# --- Layer 4 流量分流 (Port 443) ---
-layer4 {
-    :443 {
-        @ssh {
-            matcher ssh
-        }
-        route @ssh {
-            proxy {$SSH_SERVER_IP}:22 
-        }
-
-        route {
-            # 將 HTTPS 流量轉發給本地的 Layer 7 處理 (:8443)
-            # 若需要保留 Client IP，需設定 proxy_protocol，但接收端也需支援
-            proxy 127.0.0.1:8443
-        }
-    }
-}
 
 # --- Layer 7 應用層處理 (Internal Port 8443) ---
 :8443 {
-    # 啟用 CrowdSec (阻擋惡意 IP)
+    # 限制連線速率
+    rate_limit {
+        zone dynamic {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+    }
+
+    # 啟用 CrowdSec 阻擋
     crowdsec
     
     # 啟用 WAF (需確認 coraza.conf 存在)
-    # coraza_waf {
-    #     load_directives /etc/caddy/coraza.conf
-    # }
+    coraza_waf {
+        include /etc/caddy/coraza.conf
+    }
 
     # 1. 驗證入口
     @auth host auth.{$DOMAIN_NAME}
@@ -98,6 +113,9 @@ layer4 {
     # 2. Guacamole 遠端桌面
     @guac host guacamole.{$DOMAIN_NAME}
     handle @guac {
+        coraza_waf {
+            include /etc/caddy/coraza.conf
+        }
         authorize with google_policy
         reverse_proxy guacamole:8080 {
             flush_interval -1

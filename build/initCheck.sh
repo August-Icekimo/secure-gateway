@@ -67,7 +67,7 @@ fi
 # 注意：若使用 Macvlan，容器可能無法直接連線到 Host IP (需 Router 支援 Hairpin NAT 或 Bridge 模式)
 echo -e "\n${YELLOW}[4] Checking External Services Connectivity...${NC}"
 # 這裡請替換為您實際的 DSM IP
-DSM_IP="192.168.1.10" 
+DSM_IP="${SSH_SERVER_IP:-192.168.1.10}"
 nc -z -w 2 $DSM_IP 5000
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}[OK] Connected to DSM ($DSM_IP:5000)${NC}"
