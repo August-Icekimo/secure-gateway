@@ -10,13 +10,13 @@ RUN xcaddy build \
 
 FROM caddy:alpine
 
-# 下載 Coraza 專用 CRS（不能用原版 owasp/modsecurity-crs，語法不相容）
+# 下載 Coraza 專用 CRS v4.24.0，放在 @owasp_crs alias 對應路徑
 RUN apk add --no-cache curl unzip && \
-    mkdir -p /etc/caddy/owasp_crs && \
-    curl -sL https://github.com/corazawaf/coraza-coreruleset/releases/download/v4.11.0/coraza-coreruleset-4.11.0.zip \
+    curl -fsSL --retry 3 \
+         "https://codeload.github.com/corazawaf/coraza-coreruleset/zip/refs/tags/v4.24.0" \
          -o /tmp/crs.zip && \
     unzip /tmp/crs.zip -d /tmp/crs && \
-    cp -r /tmp/crs/rules/. /etc/caddy/owasp_crs/ && \
+    cp -r /tmp/crs/coraza-coreruleset-4.24.0/rules/@owasp_crs /etc/caddy/@owasp_crs && \
     rm -rf /tmp/crs /tmp/crs.zip && \
     apk del curl unzip
 
