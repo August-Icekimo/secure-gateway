@@ -27,7 +27,6 @@ services:
      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
-     - ./caddy_config/crs-setup.conf:/etc/caddy/crs-setup.conf:ro
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
      #- ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro #CRS 改bake進image 
      - caddy_data:/data
