@@ -33,8 +33,8 @@
             
             ui {
                 links {
-                    "Guacamole" "/guacamole/" icon "las la-desktop"
-                    "Proxmox" "https://pve.{$DOMAIN_NAME}" icon "las la-server"
+                    "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
+                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server"
                 }
             }
 
@@ -111,11 +111,16 @@
     # 1. 驗證入口
     @auth host auth.{$DOMAIN_NAME}
     handle @auth {
+        # /guacamole/ 重導向到正確 subdomain
+        @guac_path path /guacamole/*
+        handle @guac_path {
+            redir https://gconsole.{$DOMAIN_NAME}{uri} permanent
+        }
         authenticate with my_portal
     }
 
     # 2. Guacamole 遠端桌面
-    @guac host guacamole.{$DOMAIN_NAME}
+    @guac host gconsole.{$DOMAIN_NAME}
     handle @guac {
         authorize with google_policy
         reverse_proxy guacamole:8080 {
