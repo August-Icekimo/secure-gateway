@@ -28,7 +28,7 @@ services:
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
-     - ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro
+     #- ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro #CRS 改bake進image 
      - caddy_data:/data
      - caddy_logs:/var/log/caddy
    depends_on:
