@@ -17,6 +17,7 @@ RUN apk add --no-cache curl unzip && \
          -o /tmp/crs.zip && \
     unzip /tmp/crs.zip -d /tmp/crs && \
     cp -r /tmp/crs/coraza-coreruleset-4.24.0/rules/@owasp_crs /etc/caddy/@owasp_crs && \
+    cp /tmp/crs/coraza-coreruleset-4.24.0/rules/@crs-setup.conf.example /etc/caddy/crs-setup.conf && \
     rm -rf /tmp/crs /tmp/crs.zip && \
     apk del curl unzip
 

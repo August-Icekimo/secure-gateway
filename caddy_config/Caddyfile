@@ -117,9 +117,6 @@
     # 2. Guacamole 遠端桌面
     @guac host guacamole.{$DOMAIN_NAME}
     handle @guac {
-        coraza_waf {
-            directives `Include /etc/caddy/coraza.conf`
-        }
         authorize with google_policy
         reverse_proxy guacamole:8080 {
             flush_interval -1
