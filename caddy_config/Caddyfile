@@ -101,7 +101,7 @@
     
     # 啟用 WAF (需確認 coraza.conf 存在)
     coraza_waf {
-        include /etc/caddy/coraza.conf
+        directives `Include /etc/caddy/coraza.conf`
     }
 
     # 1. 驗證入口
@@ -114,7 +114,7 @@
     @guac host guacamole.{$DOMAIN_NAME}
     handle @guac {
         coraza_waf {
-            include /etc/caddy/coraza.conf
+            directives `Include /etc/caddy/coraza.conf`
         }
         authorize with google_policy
         reverse_proxy guacamole:8080 {
