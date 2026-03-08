@@ -88,9 +88,7 @@
 # --- Layer 7 應用層處理 (Internal Port 8443) ---
 *.{$DOMAIN_NAME}, {$DOMAIN_NAME} {
     tls {
-        dns route53 {
-            max_certs 10
-        }
+        dns route53
         resolvers 8.8.8.8
     }
     # 限制連線速率
