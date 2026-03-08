@@ -28,8 +28,8 @@
             
             enable identity provider google
             
-            # 設定 Cookie 網域 (請修改為您的網域)
-            # cookie domain {$DOMAIN_NAME}
+            # Cookie 設定在頂層 domain，讓所有 subdomain 共享登入狀態
+            cookie domain {$DOMAIN_NAME}
             
             ui {
                 links {
