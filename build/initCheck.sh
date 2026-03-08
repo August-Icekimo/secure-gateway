@@ -76,11 +76,11 @@ else
 fi
 
 # 檢查 Caddy 自身 Port 綁定
-nc -z -w 2 127.0.0.1 80
+nc -z -w 2 127.0.0.1 8080
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}[OK] Caddy is listening on :80${NC}"
+    echo -e "${GREEN}[OK] Caddy is listening on :8080${NC}"
 else
-    echo -e "${RED}[FAIL] Caddy is NOT listening on :80${NC}"
+    echo -e "${RED}[FAIL] Caddy is NOT listening on :8080${NC}"
 fi
 
 # 檢查 Google (驗證對外網路)
