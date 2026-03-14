@@ -30,6 +30,8 @@ services:
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
      - ./caddy_config/coraza-exclusions.conf:/etc/caddy/coraza-exclusions.conf:ro
      #- ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro #CRS 改bake進image 
+     - ./caddy_config/portal/users.json:/etc/caddy/portal/users.json:ro
+     - ./caddy_config/portal/custom.css:/etc/caddy/portal/custom.css:ro
      - caddy_data:/data
      - caddy_logs:/var/log/caddy
    depends_on:
