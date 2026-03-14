@@ -13,6 +13,12 @@
 
     # --- Security 全域配置 ---
     security {
+        # 建立 local identity store
+        local identity store localdb {
+            realm local
+            path /etc/caddy/portal/users.json
+        }
+
         # Google OAuth 設定
         oauth identity provider google {
             realm google
@@ -27,11 +33,16 @@
             crypto key sign-verify {$JWT_SHARED_KEY} 
             
             enable identity provider google
+            enable identity store localdb
             
             # Cookie 設定在頂層 domain，讓所有 subdomain 共享登入狀態
             cookie domain {$DOMAIN_NAME}
             
             ui {
+                theme basic
+                title "Icekimo Secure Gateway"
+                logo description "Icekimo Secure Gateway"
+                custom css path /etc/caddy/portal/custom.css
                 links {
                     "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
                     "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server"
@@ -41,6 +52,7 @@
             # 自動將 Google 驗證過的使用者賦予 User 角色
             transform user {
                 match realm google
+                match email REPLACE_WITH_YOUR_EMAIL@gmail.com
                 action add role authp/user
             }
         }
@@ -50,13 +62,7 @@
             set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
             crypto key verify {$JWT_SHARED_KEY}
             
-            # 允許特定 Email
-            allow email your.email@gmail.com
-            
-            # 或者允許特定網域 (例如公司信箱)
-            # allow email domain yourcompany.com
-            
-            # 預設允許所有通過驗證的使用者 (若不限制特定 Email)
+            # 預設允許所有通過驗證的使用者
             allow roles authp/user
         }
     }
