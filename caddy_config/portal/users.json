@@ -1,5 +1,5 @@
 {
-  "version": "1.1.19",
+  "version": "1.1.26",
   "policy": {
     "password": {
       "keep_versions": 10,
@@ -20,11 +20,36 @@
     }
   },
   "revision": 2,
-  "last_modified": "2026-03-20T15:00:26.582114968Z",
-  "loaded_at": "2026-03-20T15:00:26.484173839Z",
+  "last_modified": "2026-03-20T15:10:00.550026113Z",
+  "loaded_at": "2026-03-20T15:10:00.463330493Z",
   "users": [
     {
-      "id": "d69f1ad5-76f6-48f2-8afb-22ea6a03b131",
+      "id": "11111111-1111-1111-1111-111111111111",
+      "username": "REPLACE_WITH_YOUR_EMAIL@gmail.com",
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "0001-01-01T00:00:00Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "last_modified": "0001-01-01T00:00:00Z",
+      "roles": [
+        {
+          "name": "authp/admin"
+        },
+        {
+          "name": "authp/user"
+        }
+      ]
+    },
+    {
+      "id": "90c99a9b-fb97-4973-8ac0-45930d4733af",
       "username": "webadmin",
       "email_address": {
         "address": "webadmin@localdomain.local",
@@ -40,15 +65,15 @@
         {
           "purpose": "generic",
           "algorithm": "bcrypt",
-          "hash": "$2a$10$KlW/l1GBolJ/iENF0XvzC.YHRLPBrHnvpjYqucJxFECkdvQqC1QwS",
+          "hash": "$2a$10$OdVEEkPykkWAXDP1hSLEJuVtwkP9KhDsjTzU.DiJf4E0X7/vWqSBi",
           "cost": 10,
           "expired_at": "0001-01-01T00:00:00Z",
-          "created_at": "2026-03-20T15:00:26.484197071Z",
+          "created_at": "2026-03-20T15:10:00.463362158Z",
           "disabled_at": "0001-01-01T00:00:00Z"
         }
       ],
-      "created": "2026-03-20T15:00:26.484196239Z",
-      "last_modified": "2026-03-20T15:00:26.582104759Z",
+      "created": "2026-03-20T15:10:00.463361385Z",
+      "last_modified": "2026-03-20T15:10:00.550006836Z",
       "roles": [
         {
           "name": "admin",
