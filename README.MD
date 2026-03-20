@@ -51,7 +51,10 @@ This project integrates the following core components:
 │   └── initCheck.sh     # 啟動前環境檢查腳本
 ├── caddy_config/
 │   ├── Caddyfile        # Caddy 核心設定
-│   └── coraza.conf      # WAF 規則設定 (需下載)
+│   ├── coraza.conf      # WAF 規則設定 (需下載)
+│   └── portal/          # 白名單與 UI 樣式目錄
+│       ├── users.json   # 第一層身分白名單
+│       └── custom.css   # 登入頁面自訂樣式
 ├── caddy_data/          # Caddy SSL 憑證儲存區 (自動生成)
 ├── caddy_logs/          # Log 存放區
 ├── crowdsec_config/     # CrowdSec 設定

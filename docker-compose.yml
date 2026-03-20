@@ -25,11 +25,14 @@ services:
      - PVE_SERVER_IP=${PVE_SERVER_IP}
      - DOMAIN_NAME=${DOMAIN_NAME}
      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
+     - ALLOWEDE_GMAIL=${ALLOWEDE_GMAIL}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
      - ./caddy_config/coraza-exclusions.conf:/etc/caddy/coraza-exclusions.conf:ro
      #- ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro #CRS 改bake進image 
+     - ./caddy_config/portal/users.json:/etc/caddy/portal/users.json:ro
+     - ./caddy_config/portal/custom.css:/etc/caddy/portal/custom.css:ro
      - caddy_data:/data
      - caddy_logs:/var/log/caddy
    depends_on:
