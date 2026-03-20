@@ -4,6 +4,14 @@
       "id": "11111111-1111-1111-1111-111111111111",
       "username": "REPLACE_WITH_YOUR_EMAIL@gmail.com",
       "email": "REPLACE_WITH_YOUR_EMAIL@gmail.com",
+      "passwords": [
+        {
+          "purpose": "generic",
+          "algorithm": "bcrypt",
+          "hash": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+          "cost": 10
+        }
+      ],
       "roles": [
         {
           "name": "authp/admin"
