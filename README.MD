@@ -191,6 +191,7 @@ SSH_SERVER_IP=192.168.1.10
 PVE_SERVER_IP=192.168.1.10
 DOMAIN_NAME=yourdomain.com
 CROWDSEC_BOUNCER_KEY=YOUR_CROWDSEC_BOUNCER_API_KEY
+ALLOWEDE_GMAIL=your_gmail_account@gmail.com
 ```
 
 ### 3. 其他檔案準備/ Other File Preparation
@@ -236,6 +237,55 @@ To include the check script in the Caddy image, please modify `build/Dockerfile`
 ```dockerfile
 COPY initCheck.sh /usr/bin/initCheck.sh
 RUN chmod +x /usr/bin/initCheck.sh
+```
+
+## 🛡️ 身分認證與權限管理 / Authentication & Authorization
+
+本專案使用 `Caddy-Security` (AuthP) 模組提供穩固的身分驗證與基於角色的存取控制 (RBAC)。
+
+This project uses the `Caddy-Security` module to provide robust authentication and Role-Based Access Control (RBAC).
+
+### 1. 存取控制策略 (RBAC)
+
+系統根據角色 (`Roles`) 來限制使用者能存取的服務：
+The system limits user access to services based on `Roles`:
+
+*   **`authp/user` (一般使用者)**: 可存取 Guacamole 等一般服務。
+*   **`authp/admin` (系統管理員)**: 可額外存取 Proxmox (PVE) 等核心設施介面。
+
+若您使用 Google OAuth 登入，且信箱完全符合 `.env` 中的 `ALLOWEDE_GMAIL`，系統會在您登入時自動賦予您 `authp/admin` 與 `authp/user` 的最高權限。
+
+### 2. 本機身分白名單 (users.json)
+
+除了 Google OAuth 外，系統提供一個本地端的身分庫作為備用登入管道 (儲存於 `caddy_config/portal/users.json`)。這可用於緊急救援 (Break-Glass) 或是分配臨時帳號給外部廠商。
+In addition to Google OAuth, the system provides a local identity directory as a fallback login method.
+
+**初始化與避免 Git 合併衝突 (Important!)**:
+Caddy 啟動時會自動寫入活動時間戳記與預設資訊至此檔案。為避免正式環境執行 `git pull` 時發生衝突，**強烈建議在正式環境執行以下指令，忽略追蹤該檔案的本地修改**：
+```bash
+git update-index --assume-unchanged caddy_config/portal/users.json
+```
+
+**空白初始化範例 (Green Path)**:
+如果您想要清空並讓系統自動重新建立預設管理員 (`webadmin`) 與官方的 JSON Schema，可以將檔案內容清空並填入此空白陣列，然後重啟 Caddy：
+```json
+{
+  "users": []
+}
+```
+
+### 3. 變更本機密碼與生效方式 (Password Reset & Reload)
+
+Caddy 身分庫僅接受 `bcrypt` 加密過後的雜湊值 (Hash)，不接受明文密碼。若要幫本機使用者新增或重置密碼：
+Caddy identity store only accepts `bcrypt` hashes. To reset a local user's password:
+
+1.  使用線上的 `bcrypt` 產生器 (Cost 建議設定為 10) 將新密碼轉換成 Hash (例如 `$2a$10$...`)。
+2.  打開 `caddy_config/portal/users.json`，找到該使用者的 `passwords` 區塊並覆蓋 `hash` 欄位的值。
+3.  **無縫重新載入設定 (Zero-Downtime Reload)**:
+    修改完 JSON 並存檔後，Caddy 不會馬上讀取。請在主機端執行以下指令重新載入 Caddy 設定，使新密碼立即生效且不中斷其他使用者的連線：
+
+```bash
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
 ## 🛠 啟動與初始化/ Startup and Initialization
