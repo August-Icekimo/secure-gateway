@@ -40,15 +40,20 @@
             
             ui {
                 theme basic
-                title "Icekimo Secure Gateway"
-                logo description "Icekimo Secure Gateway"
-                custom css path /etc/caddy/portal/custom.css
+                logo_description "Icekimo Secure Gateway"
+                custom_css_path /etc/caddy/portal/custom.css
                 links {
                     "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop" allow roles authp/user
                     "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server" allow roles authp/admin
                 }
             }
 
+            # 確保環境變數定義的超級管理員自動擁有最高權限
+            transform user {
+                match email {$ALLOWEDE_GMAIL}
+                action add role authp/admin
+                action add role authp/user
+            }
         }
 
         # 授權策略：一般使用者 (Guacamole 等)
