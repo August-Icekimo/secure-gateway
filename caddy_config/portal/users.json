@@ -1,23 +1,58 @@
 {
+  "version": "1.1.19",
+  "policy": {
+    "password": {
+      "keep_versions": 10,
+      "min_length": 8,
+      "max_length": 128,
+      "require_uppercase": false,
+      "require_lowercase": false,
+      "require_number": false,
+      "require_non_alpha_numeric": false,
+      "block_reuse": false,
+      "block_password_change": false
+    },
+    "user": {
+      "min_length": 3,
+      "max_length": 50,
+      "allow_non_alpha_numeric": false,
+      "allow_uppercase": false
+    }
+  },
+  "revision": 2,
+  "last_modified": "2026-03-20T15:00:26.582114968Z",
+  "loaded_at": "2026-03-20T15:00:26.484173839Z",
   "users": [
     {
-      "id": "11111111-1111-1111-1111-111111111111",
-      "username": "REPLACE_WITH_YOUR_EMAIL@gmail.com",
-      "email": "REPLACE_WITH_YOUR_EMAIL@gmail.com",
+      "id": "d69f1ad5-76f6-48f2-8afb-22ea6a03b131",
+      "username": "webadmin",
+      "email_address": {
+        "address": "webadmin@localdomain.local",
+        "domain": "localdomain.local"
+      },
+      "email_addresses": [
+        {
+          "address": "webadmin@localdomain.local",
+          "domain": "localdomain.local"
+        }
+      ],
       "passwords": [
         {
           "purpose": "generic",
           "algorithm": "bcrypt",
-          "hash": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
-          "cost": 10
+          "hash": "$2a$10$KlW/l1GBolJ/iENF0XvzC.YHRLPBrHnvpjYqucJxFECkdvQqC1QwS",
+          "cost": 10,
+          "expired_at": "0001-01-01T00:00:00Z",
+          "created_at": "2026-03-20T15:00:26.484197071Z",
+          "disabled_at": "0001-01-01T00:00:00Z"
         }
       ],
+      "created": "2026-03-20T15:00:26.484196239Z",
+      "last_modified": "2026-03-20T15:00:26.582104759Z",
       "roles": [
         {
-          "name": "authp/admin"
-        },
-        {
-          "name": "authp/user"
+          "name": "admin",
+          "organization": "authp"
         }
       ]
     }
