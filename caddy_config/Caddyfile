@@ -43,8 +43,8 @@
                 logo description "Icekimo Secure Gateway"
                 custom css path /etc/caddy/portal/custom.css
                 links {
-                    "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop" allow roles authp/user
-                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server" allow roles authp/admin
+                    "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
+                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server"
                 }
             }
 
