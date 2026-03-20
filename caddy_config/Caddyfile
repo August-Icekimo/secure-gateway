@@ -44,26 +44,25 @@
                 logo description "Icekimo Secure Gateway"
                 custom css path /etc/caddy/portal/custom.css
                 links {
-                    "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
-                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server"
+                    "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop" allow roles authp/user
+                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server" allow roles authp/admin
                 }
             }
 
-            # 自動將 Google 驗證過的使用者賦予 User 角色
-            transform user {
-                match realm google
-                match email REPLACE_WITH_YOUR_EMAIL@gmail.com
-                action add role authp/user
-            }
         }
 
-        # 授權策略
-        authorization policy google_policy {
+        # 授權策略：一般使用者 (Guacamole 等)
+        authorization policy user_policy {
             set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
             crypto key verify {$JWT_SHARED_KEY}
-            
-            # 預設允許所有通過驗證的使用者
             allow roles authp/user
+        }
+
+        # 授權策略：管理員 (PVE 等)
+        authorization policy admin_policy {
+            set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
+            crypto key verify {$JWT_SHARED_KEY}
+            allow roles authp/admin
         }
     }
 
@@ -128,7 +127,7 @@
     # 2. Guacamole 遠端桌面
     @guac host gconsole.{$DOMAIN_NAME}
     handle @guac {
-        authorize with google_policy
+        authorize with user_policy
         reverse_proxy guacamole:8080 {
             flush_interval -1
         }
@@ -137,7 +136,7 @@
     # 3. Proxmox (PVE)
     @pve host pve.{$DOMAIN_NAME}
     handle @pve {
-        authorize with google_policy
+        authorize with admin_policy
         reverse_proxy https://{$PVE_SERVER_IP}:8006 {
             transport http {
                 tls_insecure_skip_verify
