@@ -25,6 +25,7 @@ services:
      - PVE_SERVER_IP=${PVE_SERVER_IP}
      - DOMAIN_NAME=${DOMAIN_NAME}
      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
+     - ALLOWEDE_GMAIL=${ALLOWEDE_GMAIL}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
