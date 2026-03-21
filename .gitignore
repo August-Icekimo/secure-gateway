@@ -1,0 +1,5 @@
+.env
+/tools
+crowdsec_config/local_api_credentials.yaml
+/guac_extensions/*
+initdb.sql
