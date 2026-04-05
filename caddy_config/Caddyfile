@@ -44,7 +44,7 @@
                 custom css path /etc/caddy/portal/custom.css
                 links {
                     "Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
-                    "Proxmox" "https://lab.{$DOMAIN_NAME}" icon "las la-server"
+                    "Cockpit" "https://cockpit.{$DOMAIN_NAME}" icon "las la-server"
                 }
             }
 
@@ -63,7 +63,7 @@
             allow roles authp/user
         }
 
-        # 授權策略：管理員 (PVE 等)
+        # 授權策略：管理員 (Cockpit 等)
         authorization policy admin_policy {
             set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
             crypto key verify {$JWT_SHARED_KEY}
@@ -138,18 +138,29 @@
         }
     }
 
-    # 3. Proxmox (PVE)
-    @pve host pve.{$DOMAIN_NAME}
-    handle @pve {
+    # 3. Cockpit (Web Management)
+    @cockpit host cockpit.{$DOMAIN_NAME}
+    handle @cockpit {
         authorize with admin_policy
-        reverse_proxy https://{$PVE_SERVER_IP}:8006 {
+        reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
             transport http {
                 tls_insecure_skip_verify
             }
         }
     }
 
-    # 4. 錯誤頁面處理 (Error Handling)
+    # 4. Webhook Services (LINE / Telegram)
+    @webhook host cindy.icekimo.idv.tw
+    handle @webhook {
+        handle /webhook/line* {
+            reverse_proxy http://{$COCKPIT_SERVER_IP}:8080
+        }
+        handle /webhook/telegram* {
+            reverse_proxy http://{$COCKPIT_SERVER_IP}:8080
+        }
+    }
+
+    # 5. 錯誤頁面處理 (Error Handling)
     handle_errors {
         header Content-Type text/html
         respond <<HTML

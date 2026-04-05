@@ -177,7 +177,7 @@ This project relies on several environment variables. You can inject them direct
 請準備好下列變數清單：
 Please prepare the following variables:
 
-> Note: `PVE_SERVER_IP` and `SSH_SERVER_IP` should reflect the actual LAN IP of the target machine.
+> Note: `COCKPIT_SERVER_IP` and `SSH_SERVER_IP` should reflect the actual LAN IP of the target machine.
 
 ```env
 AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID_NO_TYPOS_PLEASE
@@ -188,7 +188,7 @@ GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_SECRET_SHHH_DONT_TELL_ANYONE
 JWT_SHARED_KEY=YOUR_RANDOMLY_GENERATED_GIBBERISH_FROM_OPENSSL
 POSTGRES_PASSWORD=YOUR_DB_PASSWORD_STRONGER_THAN_YOUR_COFFEE
 SSH_SERVER_IP=192.168.1.10
-PVE_SERVER_IP=192.168.1.10
+COCKPIT_SERVER_IP=192.168.1.10
 DOMAIN_NAME=yourdomain.com
 CROWDSEC_BOUNCER_KEY=YOUR_CROWDSEC_BOUNCER_API_KEY
 ALLOWEDE_GMAIL=your_gmail_account@gmail.com
@@ -251,7 +251,7 @@ This project uses the `Caddy-Security` module to provide robust authentication a
 The system limits user access to services based on `Roles`:
 
 *   **`authp/user` (一般使用者)**: 可存取 Guacamole 等一般服務。
-*   **`authp/admin` (系統管理員)**: 可額外存取 Proxmox (PVE) 等核心設施介面。
+*   **`authp/admin` (系統管理員)**: 可額外存取 Cockpit 等核心設施介面。
 
 若您使用 Google OAuth 登入，且信箱完全符合 `.env` 中的 `ALLOWEDE_GMAIL`，系統會在您登入時自動賦予您 `authp/admin` 與 `authp/user` 的最高權限。
 
