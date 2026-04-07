@@ -141,21 +141,17 @@
 	@cockpit host cockpit.{$DOMAIN_NAME}
 	handle @cockpit {
 		authorize with admin_policy
-		reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
-			transport http {
-				tls_insecure_skip_verify
-			}
-		}
+		reverse_proxy http://{$COCKPIT_SERVER_IP}:9090 
 	}
 
 	# 4. Webhook Services (LINE / Telegram)
 	@webhook host cindy.icekimo.idv.tw
 	handle @webhook {
 		handle /webhook/line* {
-			reverse_proxy http://{$COCKPIT_SERVER_IP}:8080
+			reverse_proxy http://{$COCKPIT_SERVER_IP}:8086
 		}
 		handle /webhook/telegram* {
-			reverse_proxy http://{$COCKPIT_SERVER_IP}:8080
+			reverse_proxy http://{$COCKPIT_SERVER_IP}:8086
 		}
 	}
 
