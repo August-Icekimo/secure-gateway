@@ -95,6 +95,30 @@
 }
 
 # --- Layer 7 應用層處理 (Internal Port 8443) ---
+
+# --- Webhook Subdomain (Isolated) ---
+cindy.{$DOMAIN_NAME} {
+	tls {
+		dns route53
+		resolvers 8.8.8.8
+	}
+
+	# 僅保留 CrowdSec 阻擋，移除 WAF 與 Auth
+	crowdsec
+
+	handle /webhook/line* {
+		reverse_proxy {$COCKPIT_SERVER_IP}:8086
+	}
+	handle /webhook/telegram* {
+		reverse_proxy {$COCKPIT_SERVER_IP}:8086
+	}
+
+	# 其他路徑回傳 404
+	handle {
+		respond "Not Found" 404
+	}
+}
+
 *.{$DOMAIN_NAME}, {$DOMAIN_NAME} {
 	tls {
 		dns route53
@@ -141,19 +165,10 @@
 	@cockpit host cockpit.{$DOMAIN_NAME}
 	handle @cockpit {
 		authorize with admin_policy
-		reverse_proxy http://{$COCKPIT_SERVER_IP}:9090 
+		reverse_proxy {$COCKPIT_SERVER_IP}:9090 
 	}
 
-	# 4. Webhook Services (LINE / Telegram)
-	@webhook host cindy.icekimo.idv.tw
-	handle @webhook {
-		handle /webhook/line* {
-			reverse_proxy http://{$COCKPIT_SERVER_IP}:8086
-		}
-		handle /webhook/telegram* {
-			reverse_proxy http://{$COCKPIT_SERVER_IP}:8086
-		}
-	}
+	# 4. Webhook Services (LINE / Telegram) — MOVED TO DEDICATED BLOCK
 
 	# 5. 錯誤頁面處理 (Error Handling)
 	handle_errors {
