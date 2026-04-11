@@ -98,6 +98,9 @@
 
 # --- Webhook Subdomain (Isolated) ---
 cindy.{$DOMAIN_NAME} {
+	log {
+		output file /var/log/caddy/webhook.log
+	}
 	tls {
 		dns route53
 		resolvers 8.8.8.8
