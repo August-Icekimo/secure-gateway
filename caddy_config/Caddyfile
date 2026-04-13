@@ -65,7 +65,7 @@
 
 		# 授權策略：管理員 (Cockpit 等)
 		authorization policy admin_policy {
-			set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
+			set auth url https://auth.{$DOMAIN_NAME}/
 			crypto key verify {$JWT_SHARED_KEY}
 			allow roles authp/admin
 		}
@@ -168,7 +168,11 @@ cindy.{$DOMAIN_NAME} {
 	@cockpit host cockpit.{$DOMAIN_NAME}
 	handle @cockpit {
 		authorize with admin_policy
-		reverse_proxy {$COCKPIT_SERVER_IP}:9090 
+		reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		} 
 	}
 
 	# 4. Webhook Services (LINE / Telegram) — MOVED TO DEDICATED BLOCK
