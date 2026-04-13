@@ -183,7 +183,7 @@ cindy.{$DOMAIN_NAME} {
 			transport http {
 				tls_insecure_skip_verify
 				tls_server_name katharine
-				versions h1
+				versions 1.1
 			}
 		}
 	}
