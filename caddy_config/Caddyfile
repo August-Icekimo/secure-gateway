@@ -179,8 +179,7 @@ cindy.{$DOMAIN_NAME} {
 		reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
-			header_up Connection {>Connection}
-			header_up Upgrade {>Upgrade}
+			flush_interval -1
 			transport http {
 				tls_insecure_skip_verify
 				tls_server_name katharine
