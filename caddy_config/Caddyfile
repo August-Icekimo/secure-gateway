@@ -168,11 +168,22 @@ cindy.{$DOMAIN_NAME} {
 	@cockpit host cockpit.{$DOMAIN_NAME}
 	handle @cockpit {
 		authorize with admin_policy
+		
+		coraza_waf {
+			directives `
+				SecRule REQUEST_URI "@beginsWith /cockpit/" "id:1007,phase:1,pass,nolog,ctl:ruleEngine=Off"
+				Include /etc/caddy/coraza.conf
+			`
+		}
+
 		reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
 			transport http {
 				tls_insecure_skip_verify
+				tls_server_name localhost
 			}
-		} 
+		}
 	}
 
 	# 4. Webhook Services (LINE / Telegram) — MOVED TO DEDICATED BLOCK
