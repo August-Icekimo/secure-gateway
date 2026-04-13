@@ -140,7 +140,10 @@ cindy.{$DOMAIN_NAME} {
 	crowdsec
 
 	# 啟用 WAF (需確認 coraza.conf 存在)
-	coraza_waf {
+	@not_ws {
+		not header Connection *Upgrade*
+	}
+	coraza_waf @not_ws {
 		directives `Include /etc/caddy/coraza.conf`
 	}
 
@@ -169,7 +172,7 @@ cindy.{$DOMAIN_NAME} {
 	handle @cockpit {
 		authorize with admin_policy
 		
-		coraza_waf {
+		coraza_waf @not_ws {
 			directives `
 				SecRule REQUEST_URI "@beginsWith /cockpit/" "id:1007,phase:1,pass,nolog,ctl:ruleEngine=Off"
 				Include /etc/caddy/coraza.conf
