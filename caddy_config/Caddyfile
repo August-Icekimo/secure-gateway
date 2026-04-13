@@ -176,19 +176,13 @@ cindy.{$DOMAIN_NAME} {
 			`
 		}
 
-		reverse_proxy https://{$COCKPIT_SERVER_IP}:9090 {
+		reverse_proxy http://{$COCKPIT_SERVER_IP}:9090 {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			flush_interval -1
 			
 			# Force original Host and domain in CSP to prevent browser blocks
 			header_down Content-Security-Policy "reg-replace 192\.168\.68\.79:9090 cockpit.icekimo.idv.tw"
-			
-			transport http {
-				tls_insecure_skip_verify
-				tls_server_name katharine
-				versions 1.1
-			}
 		}
 	}
 
