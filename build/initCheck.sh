@@ -25,6 +25,10 @@ check_var "AWS_ACCESS_KEY_ID" "$AWS_ACCESS_KEY_ID"
 check_var "AWS_SECRET_ACCESS_KEY" "$AWS_SECRET_ACCESS_KEY"
 check_var "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
 check_var "JWT_SHARED_KEY" "$JWT_SHARED_KEY"
+check_var "DOMAIN_NAME" "$DOMAIN_NAME"
+check_var "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+check_var "CROWDSEC_BOUNCER_KEY" "$CROWDSEC_BOUNCER_KEY"
+check_var "ALLOWEDE_GMAIL" "$ALLOWEDE_GMAIL"
 
 if [ $MISSING_VAR -eq 1 ]; then
     echo -e "${RED}!!! Critical Environment Variables Missing. Please check your .env file or docker-compose.yml !!!${NC}"

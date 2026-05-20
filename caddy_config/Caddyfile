@@ -172,20 +172,11 @@ cindy.{$DOMAIN_NAME} {
 	handle @cockpit {
 		authorize with admin_policy
 		
-		coraza_waf @not_ws {
-			directives `
-				SecRule REQUEST_URI "@beginsWith /cockpit/" "id:1007,phase:1,pass,nolog,ctl:ruleEngine=Off"
-				Include /etc/caddy/coraza.conf
-			`
-		}
-
 		reverse_proxy http://{$COCKPIT_SERVER_IP}:9090 {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			flush_interval -1
-			
-			# Force original Host and domain in CSP to prevent browser blocks
-			header_down Content-Security-Policy "reg-replace 192\.168\.68\.79:9090 cockpit.icekimo.idv.tw"
+			header_down Content-Security-Policy "reg-replace {$COCKPIT_SERVER_IP}:9090 cockpit.{$DOMAIN_NAME}"
 		}
 	}
 

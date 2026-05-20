@@ -1,6 +1,3 @@
-version: '3'
-
-
 services:
  # --- 1. 超級閘道器 Caddy ---
  caddy:
@@ -69,8 +66,10 @@ services:
    volumes:
      - ./guac_extensions:/opt/guacamole/extensions
    depends_on:
-     - guacd
-     - postgres
+     guacd:
+       condition: service_started
+     postgres:
+       condition: service_healthy
    networks:
      - internal_bridge
 
@@ -97,6 +96,11 @@ services:
      - postgres_data:/var/lib/postgresql/data
    networks:
      - internal_bridge
+   healthcheck:
+     test: ["CMD-SHELL", "pg_isready -U guacamole_user -d guacamole_db"]
+     interval: 10s
+     timeout: 5s
+     retries: 5
 
 
 networks:
