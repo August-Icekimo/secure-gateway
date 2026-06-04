@@ -110,7 +110,8 @@ cindy.{$DOMAIN_NAME} {
 	crowdsec
 
 	handle /webhook/line-hermes* {
-		reverse_proxy {$COCKPIT_SERVER_IP}:8646/line/webhook
+		rewrite * /line/webhook
+		reverse_proxy {$COCKPIT_SERVER_IP}:8646
 	}
 	handle /webhook/line* {
 		reverse_proxy {$COCKPIT_SERVER_IP}:8086
