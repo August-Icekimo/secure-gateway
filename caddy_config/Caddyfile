@@ -109,6 +109,9 @@ cindy.{$DOMAIN_NAME} {
 	# 僅保留 CrowdSec 阻擋，移除 WAF 與 Auth
 	crowdsec
 
+	handle /webhook/line-hermes* {
+		reverse_proxy {$COCKPIT_SERVER_IP}:8646/line/webhook
+	}
 	handle /webhook/line* {
 		reverse_proxy {$COCKPIT_SERVER_IP}:8086
 	}
