@@ -292,7 +292,7 @@ body {
 .la-book, .la-info-circle, .la-exclamation-triangle, .la-times,
 .la-times-circle, .la-qrcode, .la-sign-out-alt, .la-home,
 .la-layer-group, .la-microchip, .la-mobile, .la-redo-alt,
-.la-desktop, .la-server, .la-google {
+.la-desktop, .la-server {
   display: inline-block;
   width: 1em;
   height: 1em;
@@ -334,7 +334,15 @@ body {
 .la-redo-alt             { --icon: url("../icons/ui/redo.svg"); }
 .la-desktop              { --icon: url("../icons/ui/desktop.svg"); }
 .la-server               { --icon: url("../icons/ui/server.svg"); }
-.la-google               { --icon: url("../icons/brand/google.svg"); }
+
+/* 品牌圖示不走 mask 填色，直接顯示自帶的官方色彩（Google 四色 G） */
+.la-google {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background: url("../icons/brand/google.svg") no-repeat center / contain;
+}
 
 /* ---------- 動效偏好 ---------- */
 
