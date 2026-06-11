@@ -1,5 +1,6 @@
 .env
 /tools
+.claude/settings.local.json
 crowdsec_config/local_api_credentials.yaml
 crowdsec_config/online_api_credentials.yaml
 /guac_extensions/*
