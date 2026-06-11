@@ -30,6 +30,8 @@ services:
      #- ./caddy_config/crs/rules:/etc/caddy/owasp_crs:ro #CRS 改bake進image 
      - ./caddy_config/portal/users.json:/etc/caddy/portal/users.json
      - ./caddy_config/portal/custom.css:/etc/caddy/portal/custom.css:ro
+     - ./caddy_config/portal/custom.js:/etc/caddy/portal/custom.js:ro
+     - ./caddy_config/portal/assets:/etc/caddy/portal/assets:ro
      - caddy_data:/data
      - caddy_logs:/var/log/caddy
    depends_on:

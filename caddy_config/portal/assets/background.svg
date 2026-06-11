@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <!--
+    Portal 背景圖（可直接替換本檔，詳見 assets/README.md）。
+    刻意只用半透明色塊：底色由 custom.css 的 - -lg-bg-base 依亮/暗主題提供，
+    所以同一張圖在 light/dark 都成立。
+  -->
+  <defs>
+    <radialGradient id="blob-a" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#609eff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#609eff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blob-b" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#babcff" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#babcff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blob-c" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#5edcc8" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#5edcc8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="220" cy="120" rx="720" ry="520" fill="url(#blob-a)"/>
+  <ellipse cx="1420" cy="200" rx="660" ry="470" fill="url(#blob-b)"/>
+  <ellipse cx="820" cy="1020" rx="940" ry="520" fill="url(#blob-c)"/>
+</svg>
