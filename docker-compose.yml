@@ -65,8 +65,12 @@ services:
      - POSTGRESQL_USER=guacamole_user
      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
      - TOTP_ENABLED=true # 啟用 2FA (需配合 extensions)
+     # start.sh 把 GUACAMOLE_HOME 視為模板，啟動時整份複製進 runtime home
+     # (~/.guacamole)，第三方擴充 jar 才會被載入
+     - GUACAMOLE_HOME=/etc/guacamole
    volumes:
-     - ./guac_extensions:/opt/guacamole/extensions
+     # 舊掛載點 /opt/guacamole/extensions 不會被 1.5.x start.sh 讀取（無效）
+     - ./guac_extensions:/etc/guacamole/extensions:ro
    depends_on:
      guacd:
        condition: service_started
