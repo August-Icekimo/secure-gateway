@@ -43,6 +43,10 @@
 				logo url "/assets/icons/brand/logo.svg"
 				logo description "Icekimo Secure Gateway"
 				custom css path /etc/caddy/portal/custom.css
+				custom js path /etc/caddy/portal/custom.js
+
+				# 可替換的頁面背景圖（見 portal/assets/README.md）
+				static_asset "assets/background.svg" "image/svg+xml" "/etc/caddy/portal/assets/background.svg"
 
 				# SVG 圖示（CSS mask 填色，見 portal/assets/icons/README.md）
 				static_asset "assets/icons/brand/logo.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/brand/logo.svg"

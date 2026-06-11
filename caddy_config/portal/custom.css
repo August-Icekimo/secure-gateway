@@ -5,35 +5,38 @@
 
    - 圖示：SVG 放在 assets/icons/，以 CSS mask + currentColor 填色
      （見最下方 ICON 區段與 assets/icons/README.md）
-   - Dark theme：跟隨系統 prefers-color-scheme
+   - Dark theme：預設跟隨系統 prefers-color-scheme；點擊 logo 可手動
+     切換（custom.js 寫入 data-theme，經 color-scheme + light-dark() 生效）
+   - 背景圖：assets/background.svg，可直接替換（見 assets/README.md）
    - 修改本檔後 docker restart secure-gateway 即生效，毋需 rebuild
    ===================================================================== */
 
-/* ---------- 1. Design tokens ---------- */
+/* ---------- 1. Design tokens ----------
+   亮/暗值以 light-dark() 並列，依 color-scheme 取值。
+   主題來源有二：系統 prefers-color-scheme（預設），或點 logo 後
+   custom.js 在 <html> 寫入 data-theme 強制覆寫。 */
 
 :root {
   color-scheme: light dark;
 
-  /* 背景漸層 */
-  --lg-bg-base: #e9eef6;
-  --lg-bg-a: rgba(96, 158, 255, 0.42);
-  --lg-bg-b: rgba(186, 188, 255, 0.40);
-  --lg-bg-c: rgba(94, 220, 200, 0.28);
+  /* 背景：底色 + 可替換的背景圖（見 assets/README.md） */
+  --lg-bg-base: light-dark(#e9eef6, #0c1018);
+  --lg-bg-image: url("../background.svg");
 
   /* 玻璃面板 */
-  --lg-glass: rgba(255, 255, 255, 0.55);
-  --lg-glass-soft: rgba(255, 255, 255, 0.38);
-  --lg-border: rgba(255, 255, 255, 0.65);
-  --lg-highlight: rgba(255, 255, 255, 0.75);
+  --lg-glass: light-dark(rgba(255, 255, 255, 0.55), rgba(28, 34, 48, 0.55));
+  --lg-glass-soft: light-dark(rgba(255, 255, 255, 0.38), rgba(40, 48, 66, 0.40));
+  --lg-border: light-dark(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.14));
+  --lg-highlight: light-dark(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.10));
   --lg-shadow:
-    0 24px 60px rgba(31, 45, 80, 0.18),
-    0 2px 8px rgba(31, 45, 80, 0.08);
+    0 24px 60px light-dark(rgba(31, 45, 80, 0.18), rgba(0, 0, 0, 0.55)),
+    0 2px 8px light-dark(rgba(31, 45, 80, 0.08), rgba(0, 0, 0, 0.35));
 
   /* 文字與主色 */
-  --lg-text: #1c2433;
-  --lg-text-dim: #51607a;
-  --lg-accent: #0a84ff;
-  --lg-accent-hover: #0070e0;
+  --lg-text: light-dark(#1c2433, #eef2f8);
+  --lg-text-dim: light-dark(#51607a, #9aa7bd);
+  --lg-accent: light-dark(#0a84ff, #409cff);
+  --lg-accent-hover: light-dark(#0070e0, #66b0ff);
   --lg-on-accent: #ffffff;
 
   /* 幾何 */
@@ -43,38 +46,20 @@
   --lg-blur: blur(28px) saturate(180%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --lg-bg-base: #0c1018;
-    --lg-bg-a: rgba(10, 80, 190, 0.38);
-    --lg-bg-b: rgba(120, 70, 200, 0.30);
-    --lg-bg-c: rgba(0, 130, 120, 0.22);
+/* 手動切換（custom.js 寫入）優先於系統設定 */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
 
-    --lg-glass: rgba(28, 34, 48, 0.55);
-    --lg-glass-soft: rgba(40, 48, 66, 0.40);
-    --lg-border: rgba(255, 255, 255, 0.14);
-    --lg-highlight: rgba(255, 255, 255, 0.10);
-    --lg-shadow:
-      0 24px 60px rgba(0, 0, 0, 0.55),
-      0 2px 8px rgba(0, 0, 0, 0.35);
-
-    --lg-text: #eef2f8;
-    --lg-text-dim: #9aa7bd;
-    --lg-accent: #409cff;
-    --lg-accent-hover: #66b0ff;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /* ---------- 2. 頁面背景（覆寫 bg-blue-100）---------- */
 
 html,
 html.bg-blue-100 {
-  background:
-    radial-gradient(60% 80% at 12% 8%, var(--lg-bg-a), transparent 62%),
-    radial-gradient(55% 70% at 88% 18%, var(--lg-bg-b), transparent 60%),
-    radial-gradient(75% 60% at 50% 105%, var(--lg-bg-c), transparent 65%),
-    var(--lg-bg-base);
-  background-attachment: fixed;
+  background: var(--lg-bg-image) center / cover no-repeat fixed var(--lg-bg-base);
 }
 
 body {
@@ -109,9 +94,20 @@ body {
 
 /* ---------- 4. Logo 與標題 ---------- */
 
+/* logo 兼作主題切換開關（custom.js 監聽點擊） */
 .logo-img {
   height: 4.5rem;
   filter: drop-shadow(0 6px 16px rgba(10, 132, 255, 0.35));
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.logo-img:hover {
+  transform: scale(1.06);
+}
+
+.logo-img:active {
+  transform: scale(0.94);
 }
 
 .logo-txt,
@@ -348,7 +344,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .app-btn-pri, .app-btn-sec, .app-login-btn-box, .app-portal-btn-box,
-  .app-inp-txt, .app-inp-sel {
+  .app-inp-txt, .app-inp-sel, .logo-img {
     transition: none;
   }
 }
