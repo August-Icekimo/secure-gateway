@@ -40,8 +40,34 @@
 
 			ui {
 				theme basic
+				logo url "/assets/icons/brand/logo.svg"
 				logo description "Icekimo Secure Gateway"
 				custom css path /etc/caddy/portal/custom.css
+
+				# SVG 圖示（CSS mask 填色，見 portal/assets/icons/README.md）
+				static_asset "assets/icons/brand/logo.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/brand/logo.svg"
+				static_asset "assets/icons/brand/google.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/brand/google.svg"
+				static_asset "assets/icons/ui/user.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/user.svg"
+				static_asset "assets/icons/ui/key.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/key.svg"
+				static_asset "assets/icons/ui/unlock.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/unlock.svg"
+				static_asset "assets/icons/ui/check.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/check.svg"
+				static_asset "assets/icons/ui/check-circle.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/check-circle.svg"
+				static_asset "assets/icons/ui/caret-left.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/caret-left.svg"
+				static_asset "assets/icons/ui/book.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/book.svg"
+				static_asset "assets/icons/ui/info-circle.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/info-circle.svg"
+				static_asset "assets/icons/ui/exclamation-triangle.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/exclamation-triangle.svg"
+				static_asset "assets/icons/ui/times.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/times.svg"
+				static_asset "assets/icons/ui/times-circle.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/times-circle.svg"
+				static_asset "assets/icons/ui/qrcode.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/qrcode.svg"
+				static_asset "assets/icons/ui/sign-out.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/sign-out.svg"
+				static_asset "assets/icons/ui/home.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/home.svg"
+				static_asset "assets/icons/ui/layer-group.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/layer-group.svg"
+				static_asset "assets/icons/ui/microchip.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/microchip.svg"
+				static_asset "assets/icons/ui/mobile.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/mobile.svg"
+				static_asset "assets/icons/ui/redo.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/redo.svg"
+				static_asset "assets/icons/ui/desktop.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/desktop.svg"
+				static_asset "assets/icons/ui/server.svg" "image/svg+xml" "/etc/caddy/portal/assets/icons/ui/server.svg"
+
 				links {
 					"Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
 					"Cockpit" "https://cockpit.{$DOMAIN_NAME}" icon "las la-server"
@@ -175,7 +201,7 @@ cindy.{$DOMAIN_NAME} {
 	@cockpit host cockpit.{$DOMAIN_NAME}
 	handle @cockpit {
 		authorize with admin_policy
-		
+
 		reverse_proxy http://{$COCKPIT_SERVER_IP}:9090 {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
@@ -186,17 +212,56 @@ cindy.{$DOMAIN_NAME} {
 
 	# 4. Webhook Services (LINE / Telegram) — MOVED TO DEDICATED BLOCK
 
-	# 5. 錯誤頁面處理 (Error Handling)
+	# 5. 錯誤頁面處理 (Error Handling) — 與 portal 同樣的液態玻璃風格
 	handle_errors {
 		header Content-Type text/html
 		respond <<HTML
-            <html>
-            <head><title>{err.status_code} {err.status_text}</title></head>
-            <body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
-                <h1>⚠️ Error {err.status_code}</h1>
-                <p>{err.status_text}</p>
-                <hr style="width: 50%; margin: 20px auto;">
-                <p><small>Secure Gateway</small></p>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta name="color-scheme" content="light dark">
+                <title>{err.status_code} {err.status_text}</title>
+                <style>
+                    :root {
+                        color-scheme: light dark;
+                        --bg: #e9eef6; --glass: rgba(255,255,255,.55);
+                        --border: rgba(255,255,255,.65); --text: #1c2433; --dim: #51607a;
+                    }
+                    @media (prefers-color-scheme: dark) {
+                        :root {
+                            --bg: #0c1018; --glass: rgba(28,34,48,.55);
+                            --border: rgba(255,255,255,.14); --text: #eef2f8; --dim: #9aa7bd;
+                        }
+                    }
+                    body {
+                        margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        color: var(--text);
+                        background:
+                            radial-gradient(60% 80% at 12% 8%, rgba(96,158,255,.4), transparent 62%),
+                            radial-gradient(55% 70% at 88% 18%, rgba(186,188,255,.38), transparent 60%),
+                            var(--bg);
+                    }
+                    .card {
+                        text-align: center; padding: 3rem 3.5rem; max-width: 24rem;
+                        background: var(--glass); border: 1px solid var(--border); border-radius: 28px;
+                        -webkit-backdrop-filter: blur(28px) saturate(180%);
+                        backdrop-filter: blur(28px) saturate(180%);
+                        box-shadow: 0 24px 60px rgba(31,45,80,.18);
+                    }
+                    h1 { margin: 0 0 .5rem; font-size: 3rem; letter-spacing: -.02em; }
+                    p { margin: 0; color: var(--dim); }
+                    .brand { margin-top: 1.5rem; font-size: .8rem; color: var(--dim); opacity: .7; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>{err.status_code}</h1>
+                    <p>{err.status_text}</p>
+                    <div class="brand">Icekimo Secure Gateway</div>
+                </div>
             </body>
             </html>
         HTML {err.status_code}

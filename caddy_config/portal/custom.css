@@ -1,5 +1,346 @@
-/* Icekimo Secure Gateway — Custom Portal Theme Overrides
-   Edit this file to customise the caddy-security portal UI.
-   No Caddyfile edit or container rebuild required after changes;
-   a container restart is sufficient for changes to take effect.
-*/
+/* =====================================================================
+   Icekimo Secure Gateway — Liquid Glass Theme
+   類 iOS 26 液態玻璃視覺：毛玻璃卡片、漸層背景、自動 dark theme。
+   覆寫 caddy-security basic theme（login.css / portal.css 之後載入）。
+
+   - 圖示：SVG 放在 assets/icons/，以 CSS mask + currentColor 填色
+     （見最下方 ICON 區段與 assets/icons/README.md）
+   - Dark theme：跟隨系統 prefers-color-scheme
+   - 修改本檔後 docker restart secure-gateway 即生效，毋需 rebuild
+   ===================================================================== */
+
+/* ---------- 1. Design tokens ---------- */
+
+:root {
+  color-scheme: light dark;
+
+  /* 背景漸層 */
+  --lg-bg-base: #e9eef6;
+  --lg-bg-a: rgba(96, 158, 255, 0.42);
+  --lg-bg-b: rgba(186, 188, 255, 0.40);
+  --lg-bg-c: rgba(94, 220, 200, 0.28);
+
+  /* 玻璃面板 */
+  --lg-glass: rgba(255, 255, 255, 0.55);
+  --lg-glass-soft: rgba(255, 255, 255, 0.38);
+  --lg-border: rgba(255, 255, 255, 0.65);
+  --lg-highlight: rgba(255, 255, 255, 0.75);
+  --lg-shadow:
+    0 24px 60px rgba(31, 45, 80, 0.18),
+    0 2px 8px rgba(31, 45, 80, 0.08);
+
+  /* 文字與主色 */
+  --lg-text: #1c2433;
+  --lg-text-dim: #51607a;
+  --lg-accent: #0a84ff;
+  --lg-accent-hover: #0070e0;
+  --lg-on-accent: #ffffff;
+
+  /* 幾何 */
+  --lg-radius: 28px;
+  --lg-radius-sm: 16px;
+  --lg-radius-pill: 980px;
+  --lg-blur: blur(28px) saturate(180%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lg-bg-base: #0c1018;
+    --lg-bg-a: rgba(10, 80, 190, 0.38);
+    --lg-bg-b: rgba(120, 70, 200, 0.30);
+    --lg-bg-c: rgba(0, 130, 120, 0.22);
+
+    --lg-glass: rgba(28, 34, 48, 0.55);
+    --lg-glass-soft: rgba(40, 48, 66, 0.40);
+    --lg-border: rgba(255, 255, 255, 0.14);
+    --lg-highlight: rgba(255, 255, 255, 0.10);
+    --lg-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.55),
+      0 2px 8px rgba(0, 0, 0, 0.35);
+
+    --lg-text: #eef2f8;
+    --lg-text-dim: #9aa7bd;
+    --lg-accent: #409cff;
+    --lg-accent-hover: #66b0ff;
+  }
+}
+
+/* ---------- 2. 頁面背景（覆寫 bg-blue-100）---------- */
+
+html,
+html.bg-blue-100 {
+  background:
+    radial-gradient(60% 80% at 12% 8%, var(--lg-bg-a), transparent 62%),
+    radial-gradient(55% 70% at 88% 18%, var(--lg-bg-b), transparent 60%),
+    radial-gradient(75% 60% at 50% 105%, var(--lg-bg-c), transparent 65%),
+    var(--lg-bg-base);
+  background-attachment: fixed;
+}
+
+body {
+  color: var(--lg-text);
+}
+
+/* ---------- 3. 玻璃卡片 ---------- */
+
+.app-content {
+  margin-top: 2.5rem;
+}
+
+.app-container {
+  background: var(--lg-glass);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius);
+  box-shadow:
+    var(--lg-shadow),
+    inset 0 1px 0 var(--lg-highlight);
+  padding: 2.5rem 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .app-container {
+    border-radius: var(--lg-radius);
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+/* ---------- 4. Logo 與標題 ---------- */
+
+.logo-img {
+  height: 4.5rem;
+  filter: drop-shadow(0 6px 16px rgba(10, 132, 255, 0.35));
+}
+
+.logo-txt,
+.logo-col-txt {
+  color: var(--lg-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.text-primary-700 {
+  color: var(--lg-text);
+}
+
+.text-primary-600 {
+  color: var(--lg-text-dim);
+}
+
+.text-primary-600:hover {
+  color: var(--lg-accent);
+}
+
+/* ---------- 5. 輸入欄位 ---------- */
+
+.app-inp-box {
+  border-radius: var(--lg-radius-sm);
+  box-shadow: none;
+}
+
+.app-inp-txt,
+.app-inp-sel {
+  background-color: var(--lg-glass-soft);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius-sm);
+  color: var(--lg-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-inp-txt:focus,
+.app-inp-sel:focus {
+  border-color: var(--lg-accent);
+  --tw-ring-color: var(--lg-accent);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.25);
+}
+
+.app-inp-txt::placeholder {
+  color: var(--lg-text-dim);
+}
+
+.app-inp-prf-img {
+  color: var(--lg-text-dim);
+}
+
+.app-inp-lbl {
+  color: var(--lg-text-dim);
+}
+
+/* ---------- 6. 按鈕 ---------- */
+
+.app-btn-pri,
+.app-btn-sec {
+  border-radius: var(--lg-radius-pill);
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.app-btn-pri {
+  background-color: var(--lg-accent);
+  color: var(--lg-on-accent);
+  box-shadow:
+    0 10px 24px rgba(10, 132, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.app-btn-pri:hover {
+  background-color: var(--lg-accent-hover);
+  transform: translateY(-1px);
+}
+
+.app-btn-pri:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.app-btn-sec {
+  background-color: var(--lg-glass-soft);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border-color: var(--lg-border);
+  color: var(--lg-text);
+}
+
+.app-btn-sec:hover {
+  background-color: var(--lg-glass);
+}
+
+/* ---------- 7. 登入方式（authenticator）按鈕 ---------- */
+
+.app-login-btn-box {
+  background: var(--lg-glass-soft);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius-sm);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.app-login-btn-box:hover {
+  background: var(--lg-glass);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(31, 45, 80, 0.18);
+}
+
+/* 中和模板上 bg-[#xxx] / text-[#xxx] 任意色塊，統一玻璃質感 */
+.app-login-btn-box > div[class*="bg-["] {
+  background-color: transparent !important;
+  color: var(--lg-accent) !important;
+  box-shadow: none;
+}
+
+.app-login-btn-txt {
+  background-color: transparent !important;
+  color: var(--lg-text);
+  box-shadow: none;
+}
+
+.app-login-btn-txt:hover {
+  background-color: transparent !important;
+}
+
+/* ---------- 8. Portal 服務連結 ---------- */
+
+.app-portal-btn-box {
+  display: flex;
+  align-items: center;
+  background: var(--lg-glass-soft);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius-sm);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.app-portal-btn-box:hover {
+  background: var(--lg-glass);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(31, 45, 80, 0.18);
+}
+
+.app-portal-btn-img {
+  background-color: transparent !important;
+  color: var(--lg-accent) !important;
+  box-shadow: none;
+}
+
+.app-portal-btn-txt {
+  background-color: transparent !important;
+  color: var(--lg-text);
+  box-shadow: none;
+}
+
+/* ---------- 9. QR 碼角落（保持白底以利掃描）---------- */
+
+#qrcode {
+  background: #ffffff;
+  border-radius: var(--lg-radius-sm);
+  border-color: var(--lg-border);
+}
+
+/* =====================================================================
+   ICON：CSS mask 填色 SVG
+   覆蓋 basic theme 用到的 Line Awesome class；顏色跟隨 currentColor，
+   dark theme 自動正確。新增圖示見 assets/icons/README.md。
+   ===================================================================== */
+
+.la-user, .la-key, .la-unlock, .la-check, .la-check-circle, .la-caret-left,
+.la-book, .la-info-circle, .la-exclamation-triangle, .la-times,
+.la-times-circle, .la-qrcode, .la-sign-out-alt, .la-home,
+.la-layer-group, .la-microchip, .la-mobile, .la-redo-alt,
+.la-desktop, .la-server, .la-google {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  -webkit-mask: var(--icon) no-repeat center / contain;
+  mask: var(--icon) no-repeat center / contain;
+}
+
+/* 取消字型 glyph，避免與 mask 重疊（line-awesome.css 載入失敗時也不留方塊） */
+.la-user::before, .la-key::before, .la-unlock::before, .la-check::before,
+.la-check-circle::before, .la-caret-left::before, .la-book::before,
+.la-info-circle::before, .la-exclamation-triangle::before,
+.la-times::before, .la-times-circle::before, .la-qrcode::before,
+.la-sign-out-alt::before, .la-home::before, .la-layer-group::before,
+.la-microchip::before, .la-mobile::before, .la-redo-alt::before,
+.la-desktop::before, .la-server::before, .la-google::before {
+  content: "" !important;
+}
+
+/* 路徑相對於本檔（/assets/css/custom.css）解析 */
+.la-user                 { --icon: url("../icons/ui/user.svg"); }
+.la-key                  { --icon: url("../icons/ui/key.svg"); }
+.la-unlock               { --icon: url("../icons/ui/unlock.svg"); }
+.la-check                { --icon: url("../icons/ui/check.svg"); }
+.la-check-circle         { --icon: url("../icons/ui/check-circle.svg"); }
+.la-caret-left           { --icon: url("../icons/ui/caret-left.svg"); }
+.la-book                 { --icon: url("../icons/ui/book.svg"); }
+.la-info-circle          { --icon: url("../icons/ui/info-circle.svg"); }
+.la-exclamation-triangle { --icon: url("../icons/ui/exclamation-triangle.svg"); }
+.la-times                { --icon: url("../icons/ui/times.svg"); }
+.la-times-circle         { --icon: url("../icons/ui/times-circle.svg"); }
+.la-qrcode               { --icon: url("../icons/ui/qrcode.svg"); }
+.la-sign-out-alt         { --icon: url("../icons/ui/sign-out.svg"); }
+.la-home                 { --icon: url("../icons/ui/home.svg"); }
+.la-layer-group          { --icon: url("../icons/ui/layer-group.svg"); }
+.la-microchip            { --icon: url("../icons/ui/microchip.svg"); }
+.la-mobile               { --icon: url("../icons/ui/mobile.svg"); }
+.la-redo-alt             { --icon: url("../icons/ui/redo.svg"); }
+.la-desktop              { --icon: url("../icons/ui/desktop.svg"); }
+.la-server               { --icon: url("../icons/ui/server.svg"); }
+.la-google               { --icon: url("../icons/brand/google.svg"); }
+
+/* ---------- 動效偏好 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-btn-pri, .app-btn-sec, .app-login-btn-box, .app-portal-btn-box,
+  .app-inp-txt, .app-inp-sel {
+    transition: none;
+  }
+}

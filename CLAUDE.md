@@ -24,6 +24,8 @@ A Docker Compose-based security gateway deployed on Synology DSM. It sits betwee
 - `caddy_config/coraza.conf` — Coraza WAF rules
 - `caddy_config/coraza-exclusions.conf` — WAF rule exclusions
 - `caddy_config/portal/users.json` — local identity store (fallback login, auto-written by Caddy on startup)
+- `caddy_config/portal/custom.css` — Liquid Glass portal theme (light/dark via `prefers-color-scheme`); overrides the caddy-security basic theme
+- `caddy_config/portal/assets/icons/` — SVG icons (`ui/` tinted via CSS mask + currentColor, `brand/` self-colored); each icon must be registered as a `static_asset` in the Caddyfile `ui` block (see the directory README)
 - `build/Dockerfile` — xcaddy build with plugins: `caddy-l4`, `coraza-caddy`, `caddy-crowdsec-bouncer`, `caddy-ratelimit`, `caddy-dns/route53`, `caddy-security`
 
 ## Common Operations
