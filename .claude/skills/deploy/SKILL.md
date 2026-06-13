@@ -19,6 +19,7 @@ description: 將 secure-gateway 的變更佈署到 Synology DSM（katharine → 
 2. **容器層級操作**（`ps`、`logs`、`restart`、`exec`、`inspect`）可直接用 `docker --context syno ...`，不必 ssh。
 3. **絕不 commit 任何密鑰**：`.env`、`crowdsec_config/local_api_credentials.yaml` 不得進版本庫。
 4. NAS 端的 `caddy_config/portal/users.json` 與 runtime 變動檔已設 `assume-unchanged`，git pull 前不要去動它們。
+5. **新增環境變數必走「compose 宣告 + compose up」三步，不能只改 `.env` + restart**：caddy 的 env 是在 `docker-compose.yml` 用明列 `environment:`（`- VAR=${VAR}` 逐條）注入，且 `docker restart` 沿用容器建立時的舊環境、**不重讀 `.env`**。漏任一步會讓 `{$VAR}` 展開成空字串、Caddy provision 失敗並 crash loop，連帶 auth/guacamole/cockpit 全掛。詳見步驟 3 的「新增 env 變數」列。
 
 ## 佈署步驟
 
@@ -50,12 +51,19 @@ ssh icekimo@192.168.68.69 'cd /volume1/docker/secure-gateway && git pull --ff-on
 
 | 變更內容 | 動作 |
 |---|---|
-| 只有 `caddy_config/*`（Caddyfile、coraza、portal） | `docker --context syno restart secure-gateway` |
+| 只有 `caddy_config/*`，**且未引入新的 `{$VAR}`** | `docker --context syno restart secure-gateway` |
+| `caddy_config/*` **引入新的 `{$VAR}`**（見下方三步） | 改 `docker-compose.yml` + 寫 NAS `.env`，再 `ssh ... 'cd /volume1/docker/secure-gateway && docker compose up -d caddy'` |
 | `build/Dockerfile` 或 plugin 版本 | `ssh icekimo@192.168.68.69 'cd /volume1/docker/secure-gateway && docker compose up -d --build caddy'` |
 | `docker-compose.yml` | `ssh ... 'cd /volume1/docker/secure-gateway && docker compose up -d'` |
 | `crowdsec_config/*` | `docker --context syno restart crowdsec` |
 
 **為什麼用 restart 而非 reload**：git pull 會改變檔案 inode，容器內看到的仍是舊內容，`caddy reload` 會回報 `config is unchanged` 而沒有實際生效（詳見 Reload_SOP.md 的 inode 陷阱）。restart 強制重新掛載，只有幾秒中斷，是 git-pull 流程下唯一可靠的方式。
+
+**新增 env 變數（Caddyfile 出現新的 `{$VAR}`）的三步**——少一步就會 crash loop（鐵則 5）：
+1. 在 `docker-compose.yml` 的 caddy `environment:` 補上 `- VAR=${VAR}`（這份 commit 進 git）。
+2. 把實際值寫進 **NAS 端** `.env`（密鑰不進 git）：`ssh ... 'cd /volume1/docker/secure-gateway && printf "VAR=value\n" >> .env'`（先 `sed -i "/^VAR=/d" .env` 去重）。
+3. NAS 端 `docker compose up -d caddy` 重建容器（**不是** `restart`——restart 不會重讀 `.env`）。
+典型失敗訊息：`invalid rule syntax ... matcher values not found`（caddy-security 收到空字串 `match`）。
 
 ### 4. 佈署後健康檢查（必做）
 
