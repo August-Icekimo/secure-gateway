@@ -23,6 +23,10 @@ services:
      - DOMAIN_NAME=${DOMAIN_NAME}
      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
      - ALLOWEDE_GMAIL=${ALLOWEDE_GMAIL}
+     # [新增] cindy agent terminal 唯讀檢視群組 (sandboxview)
+     - SANDBOXVIEW_GMAIL_1=${SANDBOXVIEW_GMAIL_1}
+     - SANDBOXVIEW_GMAIL_2=${SANDBOXVIEW_GMAIL_2}
+     - SANDBOXVIEW_GMAIL_3=${SANDBOXVIEW_GMAIL_3}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
