@@ -84,6 +84,21 @@
 				action add role authp/admin
 				action add role authp/user
 			}
+
+			# Agent terminal 唯讀檢視群組（不連帶開放 Guacamole）
+			# 每個帳號一個 transform（match email 為單值），email 存在 .env
+			transform user {
+				match email {$SANDBOXVIEW_GMAIL_1}
+				action add role sandboxview
+			}
+			transform user {
+				match email {$SANDBOXVIEW_GMAIL_2}
+				action add role sandboxview
+			}
+			transform user {
+				match email {$SANDBOXVIEW_GMAIL_3}
+				action add role sandboxview
+			}
 		}
 
 		# 授權策略：一般使用者 (Guacamole 等)
@@ -98,6 +113,13 @@
 			set auth url https://auth.{$DOMAIN_NAME}/
 			crypto key verify {$JWT_SHARED_KEY}
 			allow roles authp/admin
+		}
+
+		# 授權策略：Agent terminal 唯讀檢視（sandboxview 群組 + 管理員）
+		authorization policy agent_policy {
+			set auth url https://auth.{$DOMAIN_NAME}/oauth2/google
+			crypto key verify {$JWT_SHARED_KEY}
+			allow roles sandboxview authp/admin
 		}
 	}
 
@@ -150,9 +172,13 @@ cindy.{$DOMAIN_NAME} {
 		reverse_proxy {$COCKPIT_SERVER_IP}:8086
 	}
 
-	# 其他路徑回傳 404
+	# Agent terminal view — Google OAuth 後放行（sandboxview / admin）
+	# 註：唯讀僅由 :8000 服務本身決定，gateway 只負責存取控制
 	handle {
-		respond "Not Found" 404
+		authorize with agent_policy
+		reverse_proxy {$COCKPIT_SERVER_IP}:8000 {
+			flush_interval -1
+		}
 	}
 }
 
