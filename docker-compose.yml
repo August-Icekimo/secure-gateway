@@ -4,11 +4,9 @@ services:
    build: ./build
    container_name: secure-gateway
    restart: unless-stopped
-   ports:
-     - "8080:80"
-     - "8443:443"
-   networks:
-     - internal_bridge
+   # 網路共用 tailscale-gw sidecar 的 netns，Caddy 才能路由到 tailnet peer（MLX 後端 100.88.136.117）
+   # 對外 ports 與 internal_bridge 已移到 tailscale-gw service
+   network_mode: service:tailscale-gw
    environment:
      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -41,7 +39,41 @@ services:
      - caddy_data:/data
      - caddy_logs:/var/log/caddy
    depends_on:
-     - crowdsec
+     crowdsec:
+       condition: service_started
+     # netns 提供者必須先啟動；用 service_started（非 healthy）避免 tailscale 異常時連帶讓整個 gateway 起不來
+     tailscale-gw:
+       condition: service_started
+
+
+ # --- 1b. Tailscale sidecar（提供 tailnet netns，讓 Caddy 連到 MLX 後端）---
+ tailscale-gw:
+   image: tailscale/tailscale:latest
+   container_name: tailscale-gw
+   hostname: secure-gateway-nas
+   restart: unless-stopped
+   cap_add:
+     - NET_ADMIN
+   devices:
+     - /dev/net/tun
+   environment:
+     - TS_AUTHKEY=${TS_AUTHKEY}
+     - TS_USERSPACE=false
+     - TS_STATE_DIR=/var/lib/tailscale
+     - TS_HOSTNAME=secure-gateway-nas
+   # 對外埠（Caddy 共用此 netns，實際監聽 :80/:443 的是 Caddy）
+   ports:
+     - "8080:80"
+     - "8443:443"
+   volumes:
+     - tailscale_state:/var/lib/tailscale
+   networks:
+     - internal_bridge
+   healthcheck:
+     test: ["CMD", "tailscale", "status"]
+     interval: 15s
+     timeout: 5s
+     retries: 6
 
 
  # --- 2. 威脅防禦 CrowdSec ---
@@ -124,3 +156,4 @@ volumes:
   caddy_logs:
   crowdsec_db:
   postgres_data:
+  tailscale_state:
