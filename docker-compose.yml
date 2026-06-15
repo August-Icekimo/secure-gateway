@@ -27,6 +27,8 @@ services:
      - SANDBOXVIEW_GMAIL_1=${SANDBOXVIEW_GMAIL_1}
      - SANDBOXVIEW_GMAIL_2=${SANDBOXVIEW_GMAIL_2}
      - SANDBOXVIEW_GMAIL_3=${SANDBOXVIEW_GMAIL_3}
+     # [新增] MLX OpenAI-compatible API 的存取金鑰
+     - MLX_API_KEY=${MLX_API_KEY}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
