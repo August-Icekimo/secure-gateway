@@ -127,21 +127,26 @@
 		}
 	}
 
-	# --- Layer 4 流量分流 (Port 443) ---
-	# layer4 {
-	#     :443 {
-	#         @ssh {
-	#             match ssh
-	#         }
-	#         route @ssh {
-	#             proxy {$SSH_SERVER_IP}:22 
-	#         }
-	# 
-	#         route {
-	#             proxy 127.0.0.1:8443
-	#         }
-	#     }
-	# }
+	# --- Port 443 分流：由 haproxy 分流器前置處理，不在此進行 ---
+	# 舊的 caddy-l4 方案已移除：分流器與 L7 同處一個 process，改壞會讓整座 gateway
+	# （含 Cockpit 這條救援路徑）一起黑掉。現由 gateway-mux 容器負責，見 haproxy_config/haproxy.cfg。
+	#
+	# 分流器以 PROXY protocol v2 轉入，此處必須解析標頭才能取回真實 client IP：
+	# rate_limit 用 {remote_host} 當 key、各 site block 都掛 crowdsec，
+	# 少了它所有請求都會變成分流器的 IP → rate limit 塌成單一水桶、CrowdSec 失明。
+	# 僅限 :443。port 80 走 tailscale-gw 的 8080:80 直接進來、不經分流器、無 PROXY 標頭，
+	# 若套在全域會讓 :80 的 HTTP→HTTPS 轉址期待一個永遠不來的標頭而壞掉。
+	servers :443 {
+		listener_wrappers {
+			# 僅信任 internal_bridge 內的分流器。註：此網段內任一容器
+			# （crowdsec/guacamole/guacd/postgres）若被打穿即可偽造 client IP 繞過封鎖。
+			proxy_protocol {
+				allow 172.16.0.0/12
+			}
+			# 順序有意義：proxy_protocol 必須在 tls 之前解開標頭
+			tls
+		}
+	}
 
 	# 啟用 CrowdSec 全域應用配置
 	crowdsec {

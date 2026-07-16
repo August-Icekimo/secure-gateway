@@ -62,9 +62,10 @@ services:
      - TS_STATE_DIR=/var/lib/tailscale
      - TS_HOSTNAME=secure-gateway-nas
    # 對外埠（Caddy 共用此 netns，實際監聽 :80/:443 的是 Caddy）
+   # 註：8443（HTTPS）已移交 haproxy 分流器，Caddy 的 :443 改由它經 internal_bridge 轉入。
+   #     :80 不需分流，維持直接對外。
    ports:
      - "8080:80"
-     - "8443:443"
    volumes:
      - tailscale_state:/var/lib/tailscale
    networks:
@@ -74,6 +75,29 @@ services:
      interval: 15s
      timeout: 5s
      retries: 6
+
+
+ # --- 1c. Port 443 協議分流器（SSH / HTTPS）---
+ # office 封鎖 22 出站、只放行 443 且不能裝 Tailscale，故 443 需同時承載 SSH。
+ # 刻意獨立成一個容器而非用 caddy-l4：分流邏輯與 L7 解耦，Caddyfile 幾乎不必更動，
+ # rollback 只需把 8443:443 移回 tailscale-gw。
+ haproxy:
+   image: haproxy:3.0-alpine
+   container_name: gateway-mux
+   restart: unless-stopped
+   environment:
+     - SSH_SERVER_IP=${SSH_SERVER_IP}
+   ports:
+     - "8443:8443"
+   volumes:
+     - ./haproxy_config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+   networks:
+     - internal_bridge
+   depends_on:
+     # 與 Caddy 同理，用 service_started：tailscale 異常不該讓整個 443 起不來
+     # （haproxy.cfg 的 init-addr 也允許後端暫時解析不到）
+     tailscale-gw:
+       condition: service_started
 
 
  # --- 2. 威脅防禦 CrowdSec ---
