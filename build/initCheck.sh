@@ -26,7 +26,9 @@ check_var "AWS_SECRET_ACCESS_KEY" "$AWS_SECRET_ACCESS_KEY"
 check_var "GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_ID"
 check_var "JWT_SHARED_KEY" "$JWT_SHARED_KEY"
 check_var "DOMAIN_NAME" "$DOMAIN_NAME"
-check_var "POSTGRES_PASSWORD" "$POSTGRES_PASSWORD"
+# 註：POSTGRES_PASSWORD 只注入 postgres / guacamole 兩個容器，本腳本跑在 Caddy 容器內，
+#     本來就讀不到。舊版在此檢查它，等於固定打出一行紅字 + 「Critical Environment
+#     Variables Missing」的假警報，故移除。
 check_var "CROWDSEC_BOUNCER_KEY" "$CROWDSEC_BOUNCER_KEY"
 check_var "ALLOWEDE_GMAIL" "$ALLOWEDE_GMAIL"
 
