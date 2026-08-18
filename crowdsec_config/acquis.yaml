@@ -1,4 +1,10 @@
+# Caddy 存取日誌來源。檔名必須與 Caddyfile 各 site block 的 log 指令一致——
+# Caddy 對「沒有 log 指令」的站台是完全不寫記錄的（會列進 srv 的 skip_hosts），
+# 過去這份清單指向的 access.log 根本不存在，CrowdSec 形同只靠 CAPI 社群黑名單在跑。
 filenames:
-  - /var/log/caddy/access.log
+  - /var/log/caddy/access.log   # *.DOMAIN（auth / gconsole / cockpit）與 mlx
+  - /var/log/caddy/dsm.log      # dsm7，對外的 NAS 管理主控台
+  # 刻意不含 webhook.log：cindy 的 /webhook/* 是 LINE / Telegram 的機對機呼叫，
+  # 誤判封鎖會讓 webhook 靜默失效且極難察覺，風險大於收益。
 labels:
   type: caddy

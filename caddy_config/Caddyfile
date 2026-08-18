@@ -194,6 +194,10 @@ cindy.{$DOMAIN_NAME} {
 
 # --- MLX OpenAI-compatible API（Tailscale 後端，API Key 保護）---
 mlx.{$DOMAIN_NAME} {
+	log {
+		output file /var/log/caddy/access.log
+	}
+
 	tls {
 		dns route53
 		resolvers 8.8.8.8
@@ -280,6 +284,13 @@ dsm7.{$DOMAIN_NAME} {
 }
 
 *.{$DOMAIN_NAME}, {$DOMAIN_NAME} {
+	# auth / gconsole / cockpit 都在這個 block。原本沒有 log 指令，Caddy 會把它們
+	# 全列進 skip_hosts、一筆存取記錄都不寫，CrowdSec 因此對認證入口的暴力破解全盲。
+	# 檔名對齊 crowdsec_config/acquis.yaml 的讀取清單。
+	log {
+		output file /var/log/caddy/access.log
+	}
+
 	tls {
 		dns route53
 		resolvers 8.8.8.8
