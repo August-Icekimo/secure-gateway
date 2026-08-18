@@ -13,8 +13,9 @@ A Docker Compose-based security gateway deployed on Synology DSM. It sits betwee
 | Service | Container | Role |
 |---|---|---|
 | Caddy (custom) | `secure-gateway` | Reverse proxy, SSL, WAF, auth, rate limiting |
-| Tailscale sidecar | `tailscale-gw` | Provides the tailnet netns Caddy shares (`network_mode: service:tailscale-gw`); the public 8080/8443 ports live here, and it's how Caddy routes to the MLX backend on the tailnet |
-| CrowdSec | `crowdsec` | Reads Caddy logs, blocks malicious IPs |
+| Tailscale sidecar | `tailscale-gw` | Provides the tailnet netns Caddy shares (`network_mode: service:tailscale-gw`); publishes `8080:80` and `127.0.0.1:8444:443`, and it's how Caddy routes to the MLX backend on the tailnet |
+| haproxy mux | `gateway-mux` | Port 443 protocol splitter (SSH vs HTTPS). Runs `network_mode: host` so it sees real client IPs — see Client IP note below |
+| CrowdSec | `crowdsec` | Reads Caddy access logs (`access.log`, `dsm.log`), blocks malicious IPs |
 | Guacamole | `guacamole` | HTML5 SSH/VNC jump server with TOTP 2FA |
 | guacd | `guacd` | Guacamole protocol proxy |
 | PostgreSQL | `guac_postgres` | Guacamole database |
@@ -92,10 +93,39 @@ The `caddy-l4` SSH/HTTPS traffic splitter on port 443 is currently **commented o
 
 ### Tailscale Sidecar netns (reaching tailnet backends)
 The NAS Synology Tailscale package runs `tailscaled --tun=userspace-networking`, so there is **no kernel `tailscale0` device and no host route to `100.64.0.0/10`** — neither the host nor any bridge container can reach a tailnet peer (this is *not* a docker-bridge issue; the bridge works for LAN/internet). To reach the MLX backend, a `tailscale-gw` sidecar runs Tailscale in kernel-TUN mode (`TS_USERSPACE=false`, `/dev/net/tun`, `NET_ADMIN`) and Caddy joins its netns via `network_mode: service:tailscale-gw`. Consequences:
-- The public **8080/8443 ports and `internal_bridge` membership live on `tailscale-gw`**, not on the Caddy service.
+- The public **`8080:80` port, the loopback-only `127.0.0.1:8444:443`, and `internal_bridge` membership live on `tailscale-gw`**, not on the Caddy service. Port 8443 is bound directly on the host by `gateway-mux` (host networking).
 - Caddy depends on `tailscale-gw` with `condition: service_started` (deliberately *not* `service_healthy`) so a tailnet outage can't take the whole gateway down — only MLX requests 502 until the link is up.
 - `--accept-routes` is intentionally **not** set (we only need the peer's node IP `100.88.136.117`); accepting subnet routes could clash with the NAS's own LAN/subnet-router role.
 - If `tailscale-gw` is recreated, Caddy's networking drops with it — restart Caddy too.
+
+### Client IP: why `gateway-mux` uses host networking
+
+Synology's dockerd runs with the default `userland-proxy: true`, so **published ports rewrite the
+source address to the bridge gateway** (`172.21.0.1`). This was measured, not assumed: 531 log lines
+(including LINE/Telegram webhooks arriving from the public internet) contained only two distinct
+`client_ip` values, both bridge gateways; and a LAN-direct connection to `NAS:8443` — no router, no
+hairpin — still logged `172.21.0.1`. haproxy's own log showed it *received* `172.21.0.1`, so the loss
+happened at the publish layer, before haproxy; PROXY protocol was faithfully forwarding an
+already-wrong IP.
+
+Consequences while it was broken: `rate_limit` collapsed into one global bucket, CrowdSec could never
+ban a real source, and `X-Real-IP` to DSM was fake.
+
+Fix: `gateway-mux` runs `network_mode: host` and binds `:8443` on the NAS directly, so it sees the
+true source, then hands it to Caddy over PROXY protocol. It reaches Caddy via `127.0.0.1:8444`
+(tailscale-gw's loopback-only publish) — deliberately loopback so no container on any bridge can
+forge PROXY headers. Being in the host netns it has no docker DNS, hence the literal backend address
+and no `resolvers` block in `haproxy_config/haproxy.cfg`.
+
+Still not fixed, by choice:
+- **Port 80** (`tailscale-gw` `8080:80`) is still rewritten. It only serves HTTP→HTTPS redirects, so
+  the source doesn't matter. The hub whitelist covers `172.16.0.0/12`, so these never get banned.
+- **SSH over 443** stops at haproxy: `be_ssh` has no `send-proxy-v2` because sshd can't parse it, so
+  the NAS's own sshd/fail2ban still sees a local address. haproxy's log is the only record of the
+  real SSH client IP.
+- The root fix (`userland-proxy: false` in dockerd) was rejected: needs root, restarts every
+  container on the NAS including DSM's own packages, and edits a Synology package file that DSM
+  updates may overwrite.
 
 ### Subdomain Routing
 - `auth.DOMAIN` — authentication portal (caddy-security)
@@ -131,7 +161,7 @@ TS_AUTHKEY                                                     # Tailscale auth 
 
 All persistent data is in Docker named volumes (not bind mounts):
 - `caddy_data` — SSL certificates (back this up)
-- `caddy_logs` — shared read-only with CrowdSec for log analysis
+- `caddy_logs` — shared read-only with CrowdSec for log analysis. `access.log` (wildcard block + mlx) and `dsm.log` are analysed; `webhook.log` deliberately is not (banning LINE/Telegram would break webhooks silently)
 - `crowdsec_db` — CrowdSec state
 - `postgres_data` — Guacamole database
 - `tailscale_state` — `tailscale-gw` node identity/state (so it re-auths from saved state instead of needing the auth key on every restart)
