@@ -68,6 +68,9 @@ services:
    #     :80 不需分流，維持直接對外。
    ports:
      - "8080:80"
+     # 給走 host 網路的分流器回連用。刻意只綁 127.0.0.1：
+     # 對外不可見，其他 bridge 上的容器也構不到，能偽造 PROXY 標頭的只剩 host 本機行程。
+     - "127.0.0.1:8444:443"
    volumes:
      - tailscale_state:/var/lib/tailscale
    networks:
@@ -89,15 +92,18 @@ services:
    restart: unless-stopped
    environment:
      - SSH_SERVER_IP=${SSH_SERVER_IP}
-   ports:
-     - "8443:8443"
+   # host 網路而非 docker 發佈埠：Synology 的 dockerd 未設 userland-proxy=false，
+   # 發佈埠會把來源位址改寫成橋接閘道 172.21.0.1。實測（區網直連、不經路由器）
+   # 連 haproxy 自己收到的都已經是 172.21.0.1，PROXY protocol 只是忠實地把一個
+   # 早就錯掉的 IP 往下傳 → CrowdSec 對真實攻擊來源全盲、rate_limit 塌成單一水桶。
+   # 直接綁 host :8443 才拿得到真實 client IP，再經 PROXY protocol 交給 Caddy。
+   # 註：:80 那條（tailscale-gw 8080:80）仍會被改寫，但它只負責 HTTP→HTTPS 轉址，不在乎來源。
+   network_mode: host
    volumes:
      - ./haproxy_config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
-   networks:
-     - internal_bridge
    depends_on:
      # 與 Caddy 同理，用 service_started：tailscale 異常不該讓整個 443 起不來
-     # （haproxy.cfg 的 init-addr 也允許後端暫時解析不到）
+     # （後端是固定的 127.0.0.1:8444，tailscale-gw 還沒好時 health check 失敗即可，不擋啟動）
      tailscale-gw:
        condition: service_started
 
