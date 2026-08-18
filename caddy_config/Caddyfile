@@ -251,6 +251,18 @@ dsm7.{$DOMAIN_NAME} {
 		}
 	}
 
+	# DSM 7 已移除行動版 UI，但首頁仍會依 User-Agent 送出行動版 bootstrap，
+	# 而它引用的 /scripts/sencha-touch-2.4.1/* 全部 404，手機/平板因此永遠停在
+	# 「Loading...」遮罩上。這是 DSM 自身的缺陷（直連 :5000 一樣壞，與反代無關），
+	# DSM 也在該頁自己留了逃生門 /?forceDesktop=desktop，這裡直接替使用者轉過去。
+	# 刻意不做 User-Agent 判斷：桌面瀏覽器帶不帶這個參數拿到的都是同一份頁面，
+	# 少一條靠 UA 字串猜測的脆弱規則（iPad 的 UA 就不含 Mobile）。
+	@root_without_force {
+		path /
+		not query forceDesktop=desktop
+	}
+	redir @root_without_force /?forceDesktop=desktop
+
 	handle {
 		authorize with user_policy
 
