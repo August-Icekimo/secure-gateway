@@ -79,6 +79,7 @@
 				links {
 					"Guacamole" "https://gconsole.{$DOMAIN_NAME}/guacamole/" icon "las la-desktop"
 					"Cockpit" "https://cockpit.{$DOMAIN_NAME}" icon "las la-server"
+					"Synology DSM" "https://dsm7.{$DOMAIN_NAME}" icon "las la-layer-group"
 				}
 			}
 
@@ -214,6 +215,47 @@ mlx.{$DOMAIN_NAME} {
 	# 通過驗證 → 反代到 MLX 後端；flush_interval -1 確保 SSE token 串流即時送出
 	handle {
 		reverse_proxy http://100.88.136.117:8000 {
+			flush_interval -1
+		}
+	}
+}
+
+# --- Synology DSM（NAS 管理主控台，Google OAuth 後才放行）---
+# 刻意獨立成一個 block 而非併入下方共用 block，原因有二：
+#   1. 共用 block 的 rate_limit 是 100 req/min，DSM 桌面單次載入就有數百個
+#      靜態資源與 webapi 請求，套下去介面會零星載入失敗、極難除錯。
+#   2. DSM 的 webapi（entry.cgi）送的是大包 JSON / base64 payload，Coraza CRS
+#      誤判率高；而 WAF 擋的是「未登入」流量，這裡已被 authorize 擋在門外，
+#      邊際效益接近零。取捨結果：保留 CrowdSec，放掉 WAF。
+dsm7.{$DOMAIN_NAME} {
+	tls {
+		dns route53
+		resolvers 8.8.8.8
+	}
+
+	# 保留 CrowdSec 阻擋；不掛 WAF（理由見上）
+	crowdsec
+
+	# 專屬速率限制：仍防洪水，但額度足夠 DSM 載入整個桌面
+	rate_limit {
+		zone dsm {
+			key {remote_host}
+			events 600
+			window 1m
+		}
+	}
+
+	handle {
+		authorize with user_policy
+
+		# 走 http:5000 而非 https:5001：流量不出 NAS，且省掉 DSM 自簽憑證的驗證問題。
+		# 已確認 DSM 未開啟「自動將 HTTP 導向 HTTPS」（:5000 直接回 200，無 Location）。
+		# Host 標頭由 Caddy 預設原樣帶過，DSM 才會產生正確的絕對網址。
+		# 註：X-Forwarded-For / -Proto / -Host 由 Caddy 自動帶上，不必手寫（寫了會有多餘警告）。
+		reverse_proxy http://{$DSM_SERVER_IP}:5000 {
+			# X-Real-IP 則不是預設值。DSM 的自動封鎖若只看到分流器 IP，會把內部橋接位址封掉、全員鎖在門外。
+			# 需搭配 DSM「控制台 → 安全性 → 信任的代理伺服器」把 172.16.0.0/12 加為信任來源。
+			header_up X-Real-IP {remote_host}
 			flush_interval -1
 		}
 	}

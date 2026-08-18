@@ -27,6 +27,8 @@ services:
      - SANDBOXVIEW_GMAIL_3=${SANDBOXVIEW_GMAIL_3}
      # [新增] MLX OpenAI-compatible API 的存取金鑰
      - MLX_API_KEY=${MLX_API_KEY}
+     # [新增] Synology DSM 管理主控台後端（NAS 自身 LAN IP，dsm7 子網域用）
+     - DSM_SERVER_IP=${DSM_SERVER_IP}
    volumes:
      - ./caddy_config/Caddyfile:/etc/caddy/Caddyfile
      - ./caddy_config/coraza.conf:/etc/caddy/coraza.conf
