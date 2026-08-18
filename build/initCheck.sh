@@ -70,8 +70,9 @@ fi
 # 4. 檢查外部服務連線 (External Services)
 # 注意：若使用 Macvlan，容器可能無法直接連線到 Host IP (需 Router 支援 Hairpin NAT 或 Bridge 模式)
 echo -e "\n${YELLOW}[4] Checking External Services Connectivity...${NC}"
-# 這裡請替換為您實際的 DSM IP
-DSM_IP="${SSH_SERVER_IP:-192.168.1.10}"
+# dsm7 子網域用的專屬變數優先；SSH_SERVER_IP 只是向後相容的退路
+# （兩者目前恰好都是 NAS 自身，但語意不同，別再靠巧合）
+DSM_IP="${DSM_SERVER_IP:-${SSH_SERVER_IP:-192.168.1.10}}"
 nc -z -w 2 $DSM_IP 5000
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}[OK] Connected to DSM ($DSM_IP:5000)${NC}"
@@ -80,12 +81,16 @@ else
 fi
 
 # 檢查 Caddy 自身 Port 綁定
-nc -z -w 2 127.0.0.1 8080
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}[OK] Caddy is listening on :8080${NC}"
-else
-    echo -e "${RED}[FAIL] Caddy is NOT listening on :8080${NC}"
-fi
+# 註：8080 是 tailscale-gw 在 host 側的映射（8080:80），容器內 Caddy 綁的是 :80 與 :443。
+#     舊版檢查 127.0.0.1:8080 永遠 FAIL，是誤報。
+for PORT in 80 443; do
+    nc -z -w 2 127.0.0.1 $PORT
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}[OK] Caddy is listening on :$PORT${NC}"
+    else
+        echo -e "${RED}[FAIL] Caddy is NOT listening on :$PORT${NC}"
+    fi
+done
 
 # 檢查 Google (驗證對外網路)
 nc -z -w 2 google.com 443
