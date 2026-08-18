@@ -228,6 +228,12 @@ mlx.{$DOMAIN_NAME} {
 #      誤判率高；而 WAF 擋的是「未登入」流量，這裡已被 authorize 擋在門外，
 #      邊際效益接近零。取捨結果：保留 CrowdSec，放掉 WAF。
 dsm7.{$DOMAIN_NAME} {
+	# 對外的 NAS 管理主控台必須留存取記錄。另有一個陷阱：站台若沒有自己的 log 指令，
+	# Caddy 會把它列進 srv0 的 skip_hosts、完全不寫任何 access log，除錯時等於全瞎。
+	log {
+		output file /var/log/caddy/dsm.log
+	}
+
 	tls {
 		dns route53
 		resolvers 8.8.8.8
