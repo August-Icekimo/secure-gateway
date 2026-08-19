@@ -154,6 +154,7 @@ ALLOWEDE_GMAIL                                                 # Google account 
 SANDBOXVIEW_GMAIL_1, _2, _3                                    # Google accounts granted sandboxview (cindy agent terminal, view-only)
 MLX_API_KEY                                                    # API key for mlx.DOMAIN OpenAI-compatible gateway (openssl rand -hex 32)
 DSM_SERVER_IP                                                  # NAS 自身 LAN IP，dsm7.DOMAIN 反代 DSM :5000 用
+HERMES_VM_IP                                                   # Hermes VM 的 LAN IP，cindy.DOMAIN 的 /webhook/line-hermes 上游（DHCP 取得，建議在路由器設保留）
 TS_AUTHKEY                                                     # Tailscale auth key for the tailscale-gw sidecar to join the tailnet (reusable + tagged recommended)
 ```
 

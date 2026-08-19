@@ -171,9 +171,13 @@ cindy.{$DOMAIN_NAME} {
 	# 僅保留 CrowdSec 阻擋，移除 WAF 與 Auth
 	crowdsec
 
+	# Hermes 已從 COCKPIT_SERVER_IP 上的 Podman 容器搬到獨立的 KVM VM，故用專屬變數。
+	# 刻意不沿用 COCKPIT_SERVER_IP：那台機器上還有 :8086、:8000、:9090 等服務在跑，
+	# 兩者綁在一起的話，日後任一邊搬家都會誤傷另一邊。
+	# 註：rewrite 的目標路徑 /line/webhook 在 Hermes 0.20.4 仍未變，不需調整。
 	handle /webhook/line-hermes* {
 		rewrite * /line/webhook
-		reverse_proxy {$COCKPIT_SERVER_IP}:8646
+		reverse_proxy {$HERMES_VM_IP}:8646
 	}
 	handle /webhook/line* {
 		reverse_proxy {$COCKPIT_SERVER_IP}:8086
