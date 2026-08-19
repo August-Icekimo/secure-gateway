@@ -49,6 +49,48 @@ docker logs --tail 20 secure-gateway
 
 ---
 
+## 另一種「改了沒生效」：新增環境變數
+
+Caddyfile 裡新出現的 `{$VAR}` 不是靠重啟就會生效的。這一類問題的症狀比 inode 陷阱更兇——
+不是安靜地「沒生效」，而是 **Caddy 直接 crash loop**，連帶 auth / guacamole / cockpit 一起掛掉。
+
+### 為什麼？
+1. Caddy 的環境變數是在 `docker-compose.yml` 的 `environment:` **逐條明列**注入的（`- VAR=${VAR}`）。
+   沒列進去的變數，容器裡根本看不到，即使 `.env` 寫了也一樣。
+2. `docker restart` 沿用容器**建立當下**捕獲的環境，**不會重讀 `.env`**。
+
+任一步漏掉，`{$VAR}` 就會展開成空字串。典型的失敗訊息是 caddy-security 收到空的 `match` 值：
+
+```
+invalid rule syntax ... matcher values not found
+```
+
+### 三步流程（缺一不可）
+1. 在 `docker-compose.yml` 的 caddy `environment:` 補上 `- VAR=${VAR}`（這步進版控）。
+2. 把實際值寫進 NAS 端的 `.env`（密鑰不進版控）。
+3. **重建**容器，不是 restart：
+
+```bash
+docker compose up -d caddy
+```
+
+## 速查：改了什麼、該用哪個指令
+
+| 改動內容 | 套用方式 |
+|---|---|
+| `caddy_config/*`，且**未**引入新的 `{$VAR}` | `docker restart secure-gateway` |
+| `caddy_config/*`，且引入新的 `{$VAR}` | 上述三步，最後 `docker compose up -d caddy` |
+| `caddy_config/portal/assets/*` | `docker restart secure-gateway`（asset 在啟動時讀進記憶體） |
+| `docker-compose.yml` | `docker compose up -d` |
+| `build/Dockerfile` 或 plugin 版本 | `docker compose build --pull caddy && docker compose up -d caddy` |
+| `haproxy_config/haproxy.cfg` | `docker restart gateway-mux` |
+| `crowdsec_config/*` | `docker restart crowdsec` |
+
+> 註：`docker compose` 指令一律在 NAS 端執行（bind mount 的相對路徑會以執行端的工作目錄解析）。
+> 容器層級操作（`ps` / `logs` / `restart` / `exec`）則可從本機透過 docker context 直接下。
+
+---
+
 ## 附錄：WebSocket 與 Coraza WAF 的衝突解法
 
 因為 WAF 引擎的核心邏輯是去攔截並檢查標準的 HTTP 請求與回應「主體(Body)」；但 WebSocket 是一種由 HTTP 「升級 (Upgrade)」後的持續雙向 TCP 串流，這會導致 WAF 引擎因為無法完整讀取 Body 而阻斷連線 (例如發生 `NS_ERROR_WEBSOCKET_CONNECTION_REFUSED`)。
