@@ -92,8 +92,9 @@ services:
    image: haproxy:3.0-alpine
    container_name: gateway-mux
    restart: unless-stopped
-   environment:
-     - SSH_SERVER_IP=${SSH_SERVER_IP}
+   # 不需要注入環境變數：SSH 後端已固定為 127.0.0.1:22（haproxy.cfg 的 presetenv 預設值，
+   # 原因見該檔 be_ssh 的說明）。若哪天要把 443 的 SSH 分流轉給別台機器，
+   # 在此加 environment: - MUX_SSH_BACKEND=${MUX_SSH_BACKEND} 並用 compose up 重建。
    # host 網路而非 docker 發佈埠：Synology 的 dockerd 未設 userland-proxy=false，
    # 發佈埠會把來源位址改寫成橋接閘道 172.21.0.1。實測（區網直連、不經路由器）
    # 連 haproxy 自己收到的都已經是 172.21.0.1，PROXY protocol 只是忠實地把一個

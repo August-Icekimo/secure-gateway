@@ -192,6 +192,10 @@ CrowdSec blind to real attackers and collapsing `rate_limit` into a single globa
 port directly is what preserves the real client IP, which is then handed to Caddy over PROXY protocol.
 See `CLAUDE.md` for the evidence and the parts deliberately left unfixed.
 
+> ℹ️ SSH 分支刻意送往 `127.0.0.1:22` 而非 NAS 的 LAN IP：分流器走 host netns，以自身 LAN IP 回連自己的 `:22` 會被 reset（推定是 DSM 自動封鎖把 NAS 自己的位址列入黑名單，因為這條路徑沒有 PROXY protocol，所有爆破都記在它頭上）。代價是 sshd 只看得到 loopback，故節流改由分流器以真實 client IP 為 key 執行（20 連線/分）。詳見 `CLAUDE.md`。
+>
+> The SSH branch deliberately targets `127.0.0.1:22` rather than the NAS's LAN IP: the splitter lives in the host netns, and dialing the NAS's own LAN IP on `:22` gets reset (most likely DSM auto-block blacklisting the NAS's own address, since this path carries no PROXY protocol and every brute-force is charged to it). The cost is that sshd only ever sees loopback, so throttling moved into the splitter, keyed on the real client IP (20 connections/min). See `CLAUDE.md`.
+
 > ℹ️ DSM nginx 仍持有主機的 80/443，不會衝突——閘道用的是 8080/8443。
 >
 > DSM nginx continues to own ports 80/443 on the host; there is no conflict because the gateway uses 8080/8443.
@@ -205,7 +209,7 @@ This project relies on several environment variables. You can inject them direct
 請準備好下列變數清單：
 Please prepare the following variables:
 
-> Note: `SSH_SERVER_IP`, `COCKPIT_SERVER_IP` and `DSM_SERVER_IP` should reflect the actual LAN IP of each target machine. `DSM_SERVER_IP` is the NAS itself.
+> Note: `COCKPIT_SERVER_IP` and `DSM_SERVER_IP` should reflect the actual LAN IP of each target machine. `DSM_SERVER_IP` is the NAS itself. `SSH_SERVER_IP` is legacy — the 443 splitter no longer reads it (its SSH backend is fixed at loopback); only `initCheck.sh` still uses it as a `DSM_SERVER_IP` fallback.
 
 ```env
 AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY_ID_NO_TYPOS_PLEASE
