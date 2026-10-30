@@ -5,9 +5,9 @@
 #
 # 升級請有意識地改下面的版本號、單獨驗證，不要靠 rebuild 撞運氣。
 # 重建務必加 --pull，否則基底 image 仍會沿用本機舊快取。
-FROM caddy:2.11.4-builder AS builder
+FROM caddy:2.11.7-builder AS builder
 
-RUN xcaddy build v2.11.4 \
+RUN xcaddy build v2.11.7 \
     --with github.com/mholt/caddy-l4@v0.1.2 \
     --with github.com/corazawaf/coraza-caddy/v2@v2.5.0 \
     --with github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1 \
@@ -15,7 +15,7 @@ RUN xcaddy build v2.11.4 \
     --with github.com/caddy-dns/route53@v1.6.2 \
     --with github.com/greenpau/caddy-security@v1.1.64
 
-FROM caddy:2.11.4-alpine
+FROM caddy:2.11.7-alpine
 
 # Coraza 專用 CRS，放在 @owasp_crs alias 對應路徑。
 # 版本同樣釘死（原本抓 latest release，等於每次 rebuild 都可能換一整套 WAF 規則、
