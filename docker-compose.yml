@@ -130,7 +130,9 @@ services:
 
  # --- 3. Guacamole 核心 (Web App) ---
  guacamole:
-   image: guacamole/guacamole
+   # 版本釘死。升級前須先套用該版的 schema/upgrade/upgrade-pre-<ver>.sql（在映像內
+   # /opt/guacamole/extensions/guacamole-auth-jdbc/postgresql/schema/upgrade/），並先 pg_dump 備份
+   image: guacamole/guacamole:1.6.0
    container_name: guacamole
    restart: unless-stopped
    environment:
@@ -144,7 +146,8 @@ services:
      # (~/.guacamole)，第三方擴充 jar 才會被載入
      - GUACAMOLE_HOME=/etc/guacamole
    volumes:
-     # 舊掛載點 /opt/guacamole/extensions 不會被 1.5.x start.sh 讀取（無效）
+     # 舊掛載點 /opt/guacamole/extensions 不會被 start.sh 讀取（無效）；1.6.0 的
+     # entrypoint.d/100-generate-guacamole-home.sh 仍以 GUACAMOLE_HOME 為模板連結 extensions
      - ./guac_extensions:/etc/guacamole/extensions:ro
    depends_on:
      guacd:
@@ -157,7 +160,8 @@ services:
 
  # --- 4. Guacd (Protocol Proxy) ---
  guacd:
-   image: guacamole/guacd
+   # 須與 guacamole 同版本
+   image: guacamole/guacd:1.6.0
    container_name: guacd
    restart: unless-stopped
    networks:
