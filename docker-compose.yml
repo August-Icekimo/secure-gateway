@@ -139,9 +139,13 @@ services:
      - GUACD_HOSTNAME=guacd
      - POSTGRESQL_HOSTNAME=postgres
      - POSTGRESQL_DATABASE=guacamole_db
-     - POSTGRESQL_USER=guacamole_user
+     - POSTGRESQL_USERNAME=guacamole_user # 1.6.0 起 POSTGRESQL_USER 已棄用
      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
      - TOTP_ENABLED=true # 啟用 2FA (需配合 extensions)
+     # 1.6.0 預設啟用 ban 擴充（暴力破解封鎖）。Guacamole 只看得到 Caddy 的橋接 IP，
+     # 不開 RemoteIpValve 的話所有人共用一個計數，任何人輸錯幾次就把大家一起鎖住。
+     # 開啟後改採 Caddy 送的 X-Forwarded-For（Tomcat 預設 internalProxies 已涵蓋 172.16.0.0/12）
+     - REMOTE_IP_VALVE_ENABLED=true
      # start.sh 把 GUACAMOLE_HOME 視為模板，啟動時整份複製進 runtime home
      # (~/.guacamole)，第三方擴充 jar 才會被載入
      - GUACAMOLE_HOME=/etc/guacamole
