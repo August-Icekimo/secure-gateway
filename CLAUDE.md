@@ -132,6 +132,14 @@ true source, then hands it to Caddy over PROXY protocol. It reaches Caddy via `1
 forge PROXY headers. Being in the host netns it has no docker DNS, hence the literal backend address
 and no `resolvers` block in `haproxy_config/haproxy.cfg`.
 
+Downstream of Caddy, backends only see Caddy's bridge IP and must read the real one from
+`X-Forwarded-For`. Clients can't spoof that header: no `trusted_proxies` is set, so Caddy drops any
+client-supplied XFF and fills in the PROXY-protocol source instead. **Guacamole** depends on this:
+1.6.0 enables the `ban` extension by default (5 failed logins → 300 s ban). Without
+`REMOTE_IP_VALVE_ENABLED=true` in compose, every failure counts against one bridge IP, so a single
+user mistyping their password locks everyone out. Tomcat's default `internalProxies` already covers
+`172.16.0.0/12`, so no extra valve settings are needed.
+
 Still not fixed, by choice:
 - **Port 80** (`tailscale-gw` `8080:80`) is still rewritten. It only serves HTTP→HTTPS redirects, so
   the source doesn't matter. The hub whitelist covers `172.16.0.0/12`, so these never get banned.
