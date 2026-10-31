@@ -8,12 +8,16 @@
 FROM caddy:2.11.7-builder AS builder
 
 RUN xcaddy build v2.11.7 \
-    --with github.com/mholt/caddy-l4@v0.1.2 \
     --with github.com/corazawaf/coraza-caddy/v2@v2.5.0 \
     --with github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1 \
     --with github.com/mholt/caddy-ratelimit@v0.1.0 \
     --with github.com/caddy-dns/route53@v1.6.2 \
-    --with github.com/greenpau/caddy-security@v1.1.64
+    --with github.com/greenpau/caddy-security@v1.1.64 \
+    --replace github.com/mholt/caddy-l4=github.com/mholt/caddy-l4@v0.1.2
+
+# caddy-l4 不再以 --with 整套匯入（443 分流已交給 gateway-mux 的 haproxy，Caddyfile 無 layer4 設定），
+# 但 crowdsec bouncer 的 layer4 matcher 仍間接依賴它，拿不掉。只用 --replace 釘版本：
+# 不釘的話 Go 會依 bouncer 的 go.mod 退回 v0.1.1；--with 則會多註冊約 37 個用不到的 layer4 模組。
 
 FROM caddy:2.11.7-alpine
 
