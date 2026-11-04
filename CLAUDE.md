@@ -82,6 +82,19 @@ coraza_waf @not_ws {
 }
 ```
 
+### Site-wide Middleware Must Be Ordered Before `handle`
+Any plugin directive placed at site level as a gate (bouncer, rate limit, WAF) must run **before** the `handle` blocks. In Caddy's standard order, `handle` comes before `reverse_proxy`, and the `reverse_proxy` / `respond` inside a `handle` is terminal, so the request never continues past it. A global `order X before reverse_proxy` therefore places X *after* every `handle` subroute, where it silently never runs: Caddy reports no error, and `caddy validate` passes.
+
+This bit twice. Until 2026-11-04 both `crowdsec` and `rate_limit` used `before reverse_proxy`, so CrowdSec bans (~15k CAPI plus local decisions) and every rate limit were dead on all sites. Current order: `crowdsec` → `rate_limit` → `coraza_waf`. **Verify after adding or reordering any plugin** by checking that the gate appears in the first route of each site:
+```bash
+docker exec secure-gateway caddy adapt --config /etc/caddy/Caddyfile | python3 -c 'import json,sys; [print(r["match"][0]["host"][0], [h["handler"] for h in r["handle"][0]["routes"][0]["handle"]]) for r in json.load(sys.stdin)["apps"]["http"]["servers"]["srv0"]["routes"]]'
+```
+
+Rate limit values were derived from per-IP 60 s peaks in logs from 2026-08-18 to 2026-11-04 (rationale is in the Caddyfile comments): `dynamic` (wildcard block) is 300/min against an owner peak of 80, and `dsm` is 1200/min against an owner peak of 536. All LAN devices hairpin through the router and share one bucket (`192.168.0.1`). Investigate any 429 from an owner IP.
+
+### Honeypot Trap Paths
+The `(trap)` snippet in the Caddyfile is imported into the wildcard, dsm7, and mlx blocks. It answers 404 for `/internal-backup/`, `/.env*`, `/.git*`, `wp-login.php`, `wp-admin`, and `xmlrpc.php`, and tags the access-log entry `"trap":"hit"` via `log_append`. Baits: `robots.txt` lists `Disallow: /internal-backup/`, and the error page carries a hidden link. The local CrowdSec scenario `crowdsec_config/scenarios/http-trap-path.yaml` (`local/http-trap-path`, trigger type) matches only that tag, so the path list lives in the Caddyfile alone. `profiles.yaml` bans trap hits for 24 h, versus 4 h by default. In the wildcard block, the WAF answers 403 to `/.env` and `/.git` before the trap sees them, so the hub `http-sensitive-files` scenario covers those. Check hits with `docker exec crowdsec cscli alerts list -s local/http-trap-path`.
+
 ### Authentication & RBAC
 - `authp/user` — access to Guacamole
 - `authp/admin` — access to Cockpit and admin services
@@ -156,7 +169,7 @@ Still not fixed, by choice:
 - `gconsole.DOMAIN` — Guacamole (requires `authp/user`)
 - `cockpit.DOMAIN` — Cockpit system manager (requires `authp/admin`)
 - `cindy.DOMAIN` — isolated block, CrowdSec only, no WAF. `/webhook/*` paths stay unauthenticated (LINE/Telegram machine-to-machine); all other paths require Google OAuth (`sandboxview`/`authp/admin`) and proxy to the agent terminal view at `{$COCKPIT_SERVER_IP}:8000`
-- `dsm7.DOMAIN` — Synology DSM 管理主控台。獨立 block，CrowdSec + 專屬 rate limit（600/1m），**無 WAF**：DSM webapi 的 JSON payload 誤判率高，且 WAF 只擋得到已被 `authorize` 攔下的未登入流量。需 `authp/user`（`user_policy`），通過後仍要輸入 DSM 自己的帳密 → 雙層認證。反代到 `{$DSM_SERVER_IP}:5000`（http，流量不出 NAS，省去自簽憑證問題）。DSM 端需在「控制台 → 安全性 → 信任的代理伺服器」加入 `172.16.0.0/12`，否則自動封鎖會看到橋接位址而非真實 client IP。另外 `/` 會無條件 302 到 `/?forceDesktop=desktop`：DSM 7 仍會依 User-Agent 送出行動版 bootstrap，但該 UI 的 `sencha-touch-2.4.1/*` 資源已被移除、全部 404，手機/平板會永遠卡在 `Loading...` 遮罩（DSM 自身缺陷，直連 `:5000` 一樣壞）
+- `dsm7.DOMAIN` — Synology DSM 管理主控台。獨立 block，CrowdSec + 專屬 rate limit（1200/1m），**無 WAF**：DSM webapi 的 JSON payload 誤判率高，且 WAF 只擋得到已被 `authorize` 攔下的未登入流量。需 `authp/user`（`user_policy`），通過後仍要輸入 DSM 自己的帳密 → 雙層認證。反代到 `{$DSM_SERVER_IP}:5000`（http，流量不出 NAS，省去自簽憑證問題）。DSM 端需在「控制台 → 安全性 → 信任的代理伺服器」加入 `172.16.0.0/12`，否則自動封鎖會看到橋接位址而非真實 client IP。另外 `/` 會無條件 302 到 `/?forceDesktop=desktop`：DSM 7 仍會依 User-Agent 送出行動版 bootstrap，但該 UI 的 `sencha-touch-2.4.1/*` 資源已被移除、全部 404，手機/平板會永遠卡在 `Loading...` 遮罩（DSM 自身缺陷，直連 `:5000` 一樣壞）
 - `mlx.DOMAIN` — OpenAI-compatible LLM API. Machine-to-machine API-key auth (not OAuth): requests must carry `Authorization: Bearer {$MLX_API_KEY}` **or** `X-API-Key: {$MLX_API_KEY}`, else `401`. Isolated block, CrowdSec only, no WAF (streaming/SSE incompatible with Coraza); proxies to the Tailscale backend `100.88.136.117:8000` (`chrysoberyl`, an MLX host) with `flush_interval -1` for token streaming. Reachable only because Caddy shares the `tailscale-gw` sidecar's netns (see Critical Architecture Notes)
 
 ### Post-login Redirect (auto-forward)
