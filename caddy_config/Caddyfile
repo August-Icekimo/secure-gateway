@@ -6,7 +6,9 @@
 	# handle 裡的 reverse_proxy / respond 是終端 handler，請求處理完就不會再往下走
 	# → 所有正常請求都繞過了 bouncer，被 ban 的 IP 照樣進得來（caddy adapt 可驗證）。
 	order crowdsec before coraza_waf
-	order rate_limit before reverse_proxy
+	# rate_limit 與 crowdsec 有同樣的排序問題（原本 before reverse_proxy → 排在終端 handle 之後、
+	# 從未執行過）。排在 crowdsec 之後：已被 ban 的 IP 不必再消耗水桶。
+	order rate_limit after crowdsec
 
 	# Security 插件順序
 	order authenticate before respond
@@ -278,11 +280,13 @@ dsm7.{$DOMAIN_NAME} {
 	crowdsec
 	import trap
 
-	# 專屬速率限制：仍防洪水，但額度足夠 DSM 載入整個桌面
+	# 專屬速率限制：只防洪水。額度依 2026-08-18～11-04 log 推算：
+	# 本人 LAN 開桌面尖峰 536/60s、外網 387；掃描器最高僅 281（掃描交給 CrowdSec）。
+	# 原 600 只剩一成餘裕、只會擋到自己，故放寬到 1200（約 2.2 倍尖峰）。
 	rate_limit {
 		zone dsm {
 			key {remote_host}
-			events 600
+			events 1200
 			window 1m
 		}
 	}
@@ -327,11 +331,13 @@ dsm7.{$DOMAIN_NAME} {
 		dns route53
 		resolvers 8.8.8.8
 	}
-	# 限制連線速率
+	# 限制連線速率。額度依 2026-08-18～11-04 log 推算：本人尖峰 80/60s（cockpit）、
+	# 77（gconsole）；掃描器有 39 個 IP 超過 100、約 10 個超過 300，最高 902。
+	# 注意 LAN 裝置經路由器回流共用 192.168.0.1 一個水桶，100 太緊 → 300（約 3.75 倍尖峰）。
 	rate_limit {
 		zone dynamic {
 			key {remote_host}
-			events 100
+			events 300
 			window 1m
 		}
 	}
