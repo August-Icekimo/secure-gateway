@@ -1,3 +1,12 @@
+# 陷阱路徑命中幾乎不可能是誤判（真人不會去碰），封得比預設久。必須排在 default 之前。
+name: trap_ip_remediation
+filters:
+ - Alert.Remediation == true && Alert.GetScope() == "Ip" && Alert.GetScenario() == "local/http-trap-path"
+decisions:
+ - type: ban
+   duration: 24h
+on_success: break
+---
 name: default_ip_remediation
 #debug: true
 filters:

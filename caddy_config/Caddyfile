@@ -1,7 +1,11 @@
 {
 	# 全域設定：定義模組執行順序
 	order coraza_waf first
-	order crowdsec before reverse_proxy
+	# crowdsec 必須排在最前面（連 WAF 都在它之後）。原本是 `before reverse_proxy`，
+	# 但標準順序裡 handle 排在 reverse_proxy 前面，於是 crowdsec 被排到 handle 子路由之後；
+	# handle 裡的 reverse_proxy / respond 是終端 handler，請求處理完就不會再往下走
+	# → 所有正常請求都繞過了 bouncer，被 ban 的 IP 照樣進得來（caddy adapt 可驗證）。
+	order crowdsec before coraza_waf
 	order rate_limit before reverse_proxy
 
 	# Security 插件順序
@@ -156,6 +160,28 @@
 	}
 }
 
+# --- 蜜罐陷阱路徑 ---
+# 真人不會碰的路徑：robots.txt 寫成 Disallow 當餌（惡意掃描器會照著 Disallow 反向探索，
+# 守規矩的爬蟲則會避開），錯誤頁裡也藏一個隱形連結。命中後 log_append 在存取記錄寫上
+# trap=hit，CrowdSec 的 local/http-trap-path（crowdsec_config/scenarios/http-trap-path.yaml）
+# 一次就 ban，時長見 profiles.yaml。回 404 才不會讓對方知道已經被記下來。
+# 註：在有 WAF 的萬用字元 block 裡，/.env、/.git 會先被 CRS 回 403、輪不到這裡，
+# 改由 hub 的 http-sensitive-files 情境處理；dsm7 / mlx 沒掛 WAF，這兩個就由陷阱接住。
+# 只匯入有被 CrowdSec 讀取 log 的 site（cindy 的 webhook.log 刻意不分析，放了也沒用）。
+(trap) {
+	@trap path /internal-backup /internal-backup/* /.env /.env.* /.git /.git/* /wp-login.php /wp-admin /wp-admin/* /xmlrpc.php
+	handle @trap {
+		log_append trap hit
+		respond 404
+	}
+	handle /robots.txt {
+		respond <<TXT
+			User-agent: *
+			Disallow: /internal-backup/
+			TXT 200
+	}
+}
+
 # --- Layer 7 應用層處理 (Internal Port 8443) ---
 
 # --- Webhook Subdomain (Isolated) ---
@@ -209,6 +235,7 @@ mlx.{$DOMAIN_NAME} {
 
 	# 保留 CrowdSec 阻擋；不掛 WAF（串流 / JSON payload 不適合 Coraza）
 	crowdsec
+	import trap
 
 	# 兩種 key 傳遞方式皆接受：Authorization: Bearer <key> 或 X-API-Key: <key>
 	# 用 De Morgan：兩者都不符 → 視為未授權（單一 matcher 內條件為 AND）
@@ -249,6 +276,7 @@ dsm7.{$DOMAIN_NAME} {
 
 	# 保留 CrowdSec 阻擋；不掛 WAF（理由見上）
 	crowdsec
+	import trap
 
 	# 專屬速率限制：仍防洪水，但額度足夠 DSM 載入整個桌面
 	rate_limit {
@@ -318,6 +346,8 @@ dsm7.{$DOMAIN_NAME} {
 	coraza_waf @not_ws {
 		directives `Include /etc/caddy/coraza.conf`
 	}
+
+	import trap
 
 	# 1. 驗證入口
 	@auth host auth.{$DOMAIN_NAME}
@@ -403,6 +433,7 @@ dsm7.{$DOMAIN_NAME} {
                     <h1>{err.status_code}</h1>
                     <p>{err.status_text}</p>
                     <div class="brand">Icekimo Secure Gateway</div>
+                    <a href="/internal-backup/" rel="nofollow" tabindex="-1" aria-hidden="true" style="display:none">backup</a>
                 </div>
             </body>
             </html>

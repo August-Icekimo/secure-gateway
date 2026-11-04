@@ -1,0 +1,20 @@
+# 本地情境（非 hub 管理，所以是實體檔而非 symlink）。
+# 搭配 Caddyfile 的 (trap) snippet：命中陷阱路徑的請求會在存取記錄帶 "trap":"hit"。
+# 路徑清單只維護在 Caddyfile 一處，這裡只認標記。
+# 真人不會碰這些路徑 → trigger（一次即觸發），不用 leaky bucket 累積。
+type: trigger
+format: 2.0
+name: local/http-trap-path
+description: "Request to a honeypot trap path (Caddy log_append trap=hit)"
+filter: "evt.Meta.log_type == 'http_access-log' && evt.Unmarshaled.caddy.trap == 'hit'"
+groupby: evt.Meta.source_ip
+blackhole: 1m
+labels:
+  remediation: true
+  service: http
+  behavior: "http:scan"
+  label: "Honeypot trap path access"
+  confidence: 3
+  spoofable: 0
+  classification:
+    - attack.T1595.003
