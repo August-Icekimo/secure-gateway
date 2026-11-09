@@ -257,6 +257,36 @@ mlx.{$DOMAIN_NAME} {
 	}
 }
 
+# --- 自架 Tailscale DERP 中繼（見 docker-compose.yml 的 derper 服務）---
+# 存取控制交給 derper 的 --verify-clients（只收本 tailnet 的節點），這裡不做認證：
+# DERP client 是 tailscaled，不會走 OAuth 或帶 API key。
+# 不掛 WAF：DERP 是 `Upgrade: DERP` 的長連線，Coraza 會把它弄斷（同 WebSocket 的問題）。
+# 不掛 rate_limit：正常情況下每個節點只有一條長連線加上偶爾的延遲探測，水桶沒有意義，
+# 而且套錯會讓整個 tailnet 默默退回官方 DERP，很難察覺。洪水攻擊交給 CrowdSec。
+derp.{$DOMAIN_NAME} {
+	log {
+		output file /var/log/caddy/access.log
+	}
+
+	tls {
+		dns route53
+		resolvers 8.8.8.8
+	}
+
+	crowdsec
+	import trap
+
+	# derper 的 /debug/ 只允許 tailnet 或 loopback 來源，Caddy 的橋接 IP 本來就進不去。
+	# 這裡再擋一次，萬一 derper 哪天改了判斷方式也不會外洩
+	handle /debug* {
+		respond 404
+	}
+
+	handle {
+		reverse_proxy derper:8080
+	}
+}
+
 # --- Synology DSM（NAS 管理主控台，Google OAuth 後才放行）---
 # 刻意獨立成一個 block 而非併入下方共用 block，原因有二：
 #   1. 共用 block 的 rate_limit 是 100 req/min，DSM 桌面單次載入就有數百個

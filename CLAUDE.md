@@ -15,6 +15,7 @@ A Docker Compose-based security gateway deployed on Synology DSM. It sits betwee
 | Caddy (custom) | `secure-gateway` | Reverse proxy, SSL, WAF, auth, rate limiting |
 | Tailscale sidecar | `tailscale-gw` | Provides the tailnet netns Caddy shares (`network_mode: service:tailscale-gw`); publishes `8080:80` and `127.0.0.1:8444:443`, and it's how Caddy routes to the MLX backend on the tailnet |
 | haproxy mux | `gateway-mux` | Port 443 protocol splitter (SSH vs HTTPS). Runs `network_mode: host` so it sees real client IPs — see Client IP note below |
+| DERP relay | `derper` | Self-hosted Tailscale DERP behind `derp.DOMAIN`, built from source in `build/derper/` (version pinned with `tailscale-gw`) |
 | CrowdSec | `crowdsec` | Reads Caddy access logs (`access.log`, `dsm.log`), blocks malicious IPs |
 | Guacamole | `guacamole` | HTML5 SSH/VNC jump server with TOTP 2FA |
 | guacd | `guacd` | Guacamole protocol proxy |
@@ -170,6 +171,12 @@ Still not fixed, by choice:
 - `cockpit.DOMAIN` — Cockpit system manager (requires `authp/admin`)
 - `cindy.DOMAIN` — isolated block, CrowdSec only, no WAF. `/webhook/*` paths stay unauthenticated (LINE/Telegram machine-to-machine); all other paths require Google OAuth (`sandboxview`/`authp/admin`) and proxy to the agent terminal view at `{$COCKPIT_SERVER_IP}:8000`
 - `dsm7.DOMAIN` — Synology DSM 管理主控台。獨立 block，CrowdSec + 專屬 rate limit（1200/1m），**無 WAF**：DSM webapi 的 JSON payload 誤判率高，且 WAF 只擋得到已被 `authorize` 攔下的未登入流量。需 `authp/user`（`user_policy`），通過後仍要輸入 DSM 自己的帳密 → 雙層認證。反代到 `{$DSM_SERVER_IP}:5000`（http，流量不出 NAS，省去自簽憑證問題）。DSM 端需在「控制台 → 安全性 → 信任的代理伺服器」加入 `172.16.0.0/12`，否則自動封鎖會看到橋接位址而非真實 client IP。另外 `/` 會無條件 302 到 `/?forceDesktop=desktop`：DSM 7 仍會依 User-Agent 送出行動版 bootstrap，但該 UI 的 `sencha-touch-2.4.1/*` 資源已被移除、全部 404，手機/平板會永遠卡在 `Loading...` 遮罩（DSM 自身缺陷，直連 `:5000` 一樣壞）
+- `derp.DOMAIN` — self-hosted Tailscale DERP relay. Isolated block, CrowdSec only, no WAF (DERP is a long-lived `Upgrade: DERP` connection) and no rate limit; `/debug*` answers 404. Proxies to `derper:8080` (plain HTTP, Caddy terminates TLS). No auth at the Caddy layer: access control is derper's `--verify-clients`, which asks `tailscale-gw`'s tailscaled (socket shared via the `tailscale_sock` volume, `TS_SOCKET=/var/run/tailscale/tailscaled.sock`) whether the node key is in its netmap. Why it exists: the office FortiGate blocks UDP (STUN 3478 included), so office devices can never go direct and always relay; the official DERP regions are abroad, so the relay on the NAS removes the detour. STUN is off (`-stun=false`, `STUNPort: -1`). It is only used once the tailnet ACL (Tailscale admin console, not in this repo) carries:
+  ```json
+  "derpMap": {"Regions": {"900": {"RegionID": 900, "RegionCode": "nas", "RegionName": "Home NAS",
+    "Nodes": [{"Name": "900a", "RegionID": 900, "HostName": "derp.<DOMAIN>", "DERPPort": 443, "STUNPort": -1}]}}}
+  ```
+  `OmitDefaultRegions` is deliberately not set, so clients fall back to the official regions if the NAS is down. DNS: Route53 has no wildcard, `derp` is a CNAME to the duckdns name. Verify from a client: `tailscale netcheck` lists region 900, and `tailscale ping secure-gateway-nas` shows `via DERP(nas)`
 - `mlx.DOMAIN` — OpenAI-compatible LLM API. Machine-to-machine API-key auth (not OAuth): requests must carry `Authorization: Bearer {$MLX_API_KEY}` **or** `X-API-Key: {$MLX_API_KEY}`, else `401`. Isolated block, CrowdSec only, no WAF (streaming/SSE incompatible with Coraza); proxies to the Tailscale backend `100.88.136.117:8000` (`chrysoberyl`, an MLX host) with `flush_interval -1` for token streaming. Reachable only because Caddy shares the `tailscale-gw` sidecar's netns (see Critical Architecture Notes)
 
 ### Post-login Redirect (auto-forward)
@@ -203,4 +210,6 @@ All persistent data is in Docker named volumes (not bind mounts):
 - `caddy_logs` — shared read-only with CrowdSec for log analysis. `access.log` (wildcard block + mlx) and `dsm.log` are analysed; `webhook.log` deliberately is not (banning LINE/Telegram would break webhooks silently)
 - `crowdsec_db` — CrowdSec state
 - `postgres_data` — Guacamole database
+- `derper_data` — DERP node private key (`derper.key`); losing it just makes the relay a new server
+- `tailscale_sock` — tailscaled LocalAPI socket, read-write in `tailscale-gw`, read-only in `derper`
 - `tailscale_state` — `tailscale-gw` node identity/state (so it re-auths from saved state instead of needing the auth key on every restart)

@@ -66,6 +66,9 @@ services:
      - TS_USERSPACE=false
      - TS_STATE_DIR=/var/lib/tailscale
      - TS_HOSTNAME=secure-gateway-nas
+     # socket 放到 CLI 的預設路徑並掛進共用 volume，讓 derper 的 --verify-clients 問得到 tailscaled
+     # （containerboot 預設是 /tmp/tailscaled.sock，別的容器碰不到）
+     - TS_SOCKET=/var/run/tailscale/tailscaled.sock
    # 對外埠（Caddy 共用此 netns，實際監聽 :80/:443 的是 Caddy）
    # 註：8443（HTTPS）已移交 haproxy 分流器，Caddy 的 :443 改由它經 internal_bridge 轉入。
    #     :80 不需分流，維持直接對外。
@@ -76,6 +79,7 @@ services:
      - "127.0.0.1:8444:443"
    volumes:
      - tailscale_state:/var/lib/tailscale
+     - tailscale_sock:/var/run/tailscale
    networks:
      - internal_bridge
    healthcheck:
@@ -83,6 +87,46 @@ services:
      interval: 15s
      timeout: 5s
      retries: 6
+
+
+ # --- 1d. 自架 DERP 中繼（derp.DOMAIN）---
+ # 公司的 FortiGate 擋了 UDP（含 STUN 3478），公司裝置無法和 NAS 直連，只能走 DERP。
+ # 官方 DERP 在國外，流量會繞出去再繞回來；中繼站放在 NAS 上，延遲就只剩公司到家這一段。
+ # 走 443 → gateway-mux → Caddy derp.DOMAIN → 這裡，不需要任何 UDP，也不必對外開新的 port。
+ # 不發佈 port，只掛 internal_bridge，由 Caddy 終止 TLS 後以 plain HTTP 轉進來。
+ # 要在 Tailscale admin 的 ACL 裡加上 derpMap 才會被用到，見 CLAUDE.md。
+ derper:
+   build: ./build/derper
+   container_name: derper
+   restart: unless-stopped
+   command:
+     # 不是 :443、也沒有 -certmode manual → 只跑 plain HTTP（TLS 由 Caddy 負責）
+     - -a=:8080
+     - -http-port=-1
+     # STUN 是 UDP，公司那端本來就打不通，也沒有對外發佈，關掉
+     - -stun=false
+     - -home=blank
+     # 節點私鑰，存在 volume 裡，重建容器才不會變成一台新的中繼站
+     - -c=/var/lib/derper/derper.key
+     # 只讓本 tailnet 的節點使用，否則就是一台任何人都能用的公開中繼站。
+     # 判斷方式是問 tailscale-gw 的 tailscaled 這個 node key 在不在它的 netmap 裡，
+     # 所以 ACL 讓 tailscale-gw 看不到的節點也會被拒（那些節點本來就連不到 NAS，影響不大）。
+     - -verify-clients
+     - -socket=/var/run/tailscale/tailscaled.sock
+   volumes:
+     - derper_data:/var/lib/derper
+     - tailscale_sock:/var/run/tailscale:ro
+   networks:
+     - internal_bridge
+   depends_on:
+     # 同樣用 service_started：tailscaled 還沒好時只是暫時驗證不了 client，client 會自動退回官方 DERP
+     tailscale-gw:
+       condition: service_started
+   healthcheck:
+     test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/generate_204"]
+     interval: 30s
+     timeout: 5s
+     retries: 3
 
 
  # --- 1c. Port 443 協議分流器（SSH / HTTPS）---
@@ -202,3 +246,6 @@ volumes:
   crowdsec_db:
   postgres_data:
   tailscale_state:
+  # tailscaled 的 LocalAPI socket，tailscale-gw 讀寫、derper 唯讀掛載
+  tailscale_sock:
+  derper_data:
