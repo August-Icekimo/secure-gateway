@@ -82,6 +82,11 @@ services:
      - tailscale_sock:/var/run/tailscale
    networks:
      - internal_bridge
+   # tailscaled 要連得到自己的 DERP（derp.DOMAIN），home DERP 才會選 nas。
+   # 指 127.0.0.1 = 同 netns 的 Caddy :443（SNI/憑證照常；proxy_protocol 對無標頭連線放行）。
+   # 不繞公網 hairpin，也不依賴 NAS 本機 DNS（曾有過時的 DOMAIN zone，子網域全回 NXDOMAIN）。
+   extra_hosts:
+     - "derp.${DOMAIN_NAME}:127.0.0.1"
    healthcheck:
      test: ["CMD", "tailscale", "status"]
      interval: 15s
