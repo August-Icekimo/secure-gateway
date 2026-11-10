@@ -106,11 +106,18 @@ services:
    container_name: derper
    restart: unless-stopped
    command:
-     # 不是 :443、也沒有 -certmode manual → 只跑 plain HTTP（TLS 由 Caddy 負責）
-     - -a=:8080
+     # 不是 :443、也沒有 -certmode manual → 只跑 plain HTTP（TLS 由 Caddy 負責）。
+     # 只綁 loopback：共用 tailscale-gw netns 後，Caddy 走 127.0.0.1 就到得了，
+     # bridge 上的容器與 tailnet 節點都碰不到。
+     - -a=127.0.0.1:8080
      - -http-port=-1
-     # STUN 是 UDP，公司那端本來就打不通，也沒有對外發佈，關掉
-     - -stun=false
+     # STUN 要開，而且 ACL derpMap 的 STUNPort 要是 3478。原因：tailscale-gw 自己有 UDP，
+     # netcheck 只用 STUN 量延遲，nas 沒有 STUN 就永遠量不到，home DERP 會停在 hkg，
+     # 公司端（只能走 DERP）的封包就得繞香港。tailscale-gw 把 derp.DOMAIN 解析成 127.0.0.1
+     # （extra_hosts），STUN 直接打到同 netns 的這裡。STUN 不對外發佈：其他 client 的 STUN
+     # 會失敗，不會選 nas；公司端本來就沒 UDP，照舊用 HTTPS 量延遲。
+     - -stun=true
+     - -stun-port=3478
      - -home=blank
      # 節點私鑰，存在 volume 裡，重建容器才不會變成一台新的中繼站
      - -c=/var/lib/derper/derper.key
@@ -122,8 +129,9 @@ services:
    volumes:
      - derper_data:/var/lib/derper
      - tailscale_sock:/var/run/tailscale:ro
-   networks:
-     - internal_bridge
+   # 共用 tailscale-gw 的 netns（同 Caddy），STUN 才收得到 tailscale-gw 送往 127.0.0.1 的封包。
+   # tailscale-gw 重建時 derper 也要跟著重建（compose up 會自動處理，別加 --no-deps）。
+   network_mode: service:tailscale-gw
    depends_on:
      # 同樣用 service_started：tailscaled 還沒好時只是暫時驗證不了 client，client 會自動退回官方 DERP
      tailscale-gw:

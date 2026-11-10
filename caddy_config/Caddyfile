@@ -276,14 +276,14 @@ derp.{$DOMAIN_NAME} {
 	crowdsec
 	import trap
 
-	# derper 的 /debug/ 只允許 tailnet 或 loopback 來源，Caddy 的橋接 IP 本來就進不去。
-	# 這裡再擋一次，萬一 derper 哪天改了判斷方式也不會外洩
+	# derper 的 /debug/ 允許 loopback 來源，而 derper 與 Caddy 共用 tailscale-gw 的 netns、
+	# 經 127.0.0.1 轉入，所以這一層是唯一的防線，不能拿掉。
 	handle /debug* {
 		respond 404
 	}
 
 	handle {
-		reverse_proxy derper:8080
+		reverse_proxy 127.0.0.1:8080
 	}
 }
 
