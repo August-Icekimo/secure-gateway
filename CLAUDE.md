@@ -16,6 +16,7 @@ A Docker Compose-based security gateway deployed on Synology DSM. It sits betwee
 | Tailscale sidecar | `tailscale-gw` | Provides the tailnet netns Caddy shares (`network_mode: service:tailscale-gw`); publishes `8080:80` and `127.0.0.1:8444:443`, and it's how Caddy routes to the MLX backend on the tailnet |
 | haproxy mux | `gateway-mux` | Port 443 protocol splitter (SSH vs HTTPS). Runs `network_mode: host` so it sees real client IPs — see Client IP note below |
 | DERP relay | `derper` | Self-hosted Tailscale DERP behind `derp.DOMAIN`, built from source in `build/derper/` (version pinned with `tailscale-gw`) |
+| LAN SSH relay | `mint2bee-relay` | socat in `tailscale-gw`'s netns: `DSM_SERVER_IP:9822` (LAN only, not NATed) → tailnet node Mint2Bee `100.121.91.120:22`, so Heeler for herdr works at home without Tailscale on the phone. The NAS's own Tailscale is userspace, so the NAS can't act as an SSH jump host to the tailnet |
 | CrowdSec | `crowdsec` | Reads Caddy access logs (`access.log`, `dsm.log`), blocks malicious IPs |
 | Guacamole | `guacamole` | HTML5 SSH/VNC jump server with TOTP 2FA |
 | guacd | `guacd` | Guacamole protocol proxy |

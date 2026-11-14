@@ -77,6 +77,9 @@ services:
      # 給走 host 網路的分流器回連用。刻意只綁 127.0.0.1：
      # 對外不可見，其他 bridge 上的容器也構不到，能偽造 PROXY 標頭的只剩 host 本機行程。
      - "127.0.0.1:8444:443"
+     # mint2bee-relay（LAN → Mint2Bee SSH）。只綁 NAS 的 LAN IP，router 也沒 NAT 這個 port，所以對外不可見。
+     # 9822 落在 IANA 1024–9999 之間最長的一段未分配區間（9803–9874）。
+     - "${DSM_SERVER_IP}:9822:9822"
    volumes:
      - tailscale_state:/var/lib/tailscale
      - tailscale_sock:/var/run/tailscale
@@ -141,6 +144,24 @@ services:
      interval: 30s
      timeout: 5s
      retries: 3
+
+
+ # --- 1e. LAN → Mint2Bee SSH 轉發（給 Heeler for herdr 在家用）---
+ # Mint2Bee 只能從 tailnet 連到（100.121.91.120）。NAS 本機的 Tailscale 是 userspace 模式，
+ # 所以 LAN 和 NAS 本機都沒有通往 100.64.0.0/10 的路由，拿 NAS 當 SSH 跳板也一樣到不了。
+ # 這個容器放進 tailscale-gw 的 netns，把 TCP 原封不動轉過去（L4，加密由 SSH 自己負責）。
+ # Heeler 路由：直接連線 192.168.68.69:9822。兩條路由背後是同一個 sshd，所以 host key 相同。
+ # Mint2Bee 的 sshd 看到的來源都是 NAS 的 tailnet IP：如果它有 fail2ban，被封的會是整條轉發。
+ # 對外 port 開在 tailscale-gw 上（9822），新增或修改後要重建 tailscale-gw，Caddy 和 derper 會跟著重啟。
+ mint2bee-relay:
+   image: alpine/socat:1.8.1.1
+   container_name: mint2bee-relay
+   restart: unless-stopped
+   network_mode: service:tailscale-gw
+   command: TCP-LISTEN:9822,fork,reuseaddr TCP:100.121.91.120:22
+   depends_on:
+     tailscale-gw:
+       condition: service_started
 
 
  # --- 1c. Port 443 協議分流器（SSH / HTTPS）---
