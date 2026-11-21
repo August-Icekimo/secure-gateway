@@ -40,17 +40,14 @@ A Docker Compose-based security gateway deployed on Synology DSM. It sits betwee
 docker-compose up -d --build
 ```
 
-**Reload Caddy config (zero-downtime, see inode caveat below):**
-```bash
-docker exec secure-gateway caddy reload --config /etc/caddy/Caddyfile
-```
-
-**Restart Caddy (always works, a few seconds downtime):**
+**Apply Caddy config changes — restart only (a few seconds downtime):**
 ```bash
 docker restart secure-gateway
 ```
 
-**Check if reload actually applied** (if logs say `config is unchanged`, the inode changed — use restart instead):
+**`caddy reload` does not work** since caddy-security v1.7.0 (2026-11-21). Every reload is rejected with `identity file "/etc/caddy/portal/users.json" already belongs to a security runtime; overlapping local file reload requires AuthCrunch database coordination`: a live replacement may not reuse the local identity file that the running runtime owns (introduced in v1.2.1). The rejection is safe, because the old config keeps serving, but nothing is applied. Always use `docker restart secure-gateway`. (The inode trap below used to be the reason, and it still applies.)
+
+**Check that a restart came up cleanly:**
 ```bash
 docker logs --tail 20 secure-gateway
 ```
@@ -66,7 +63,7 @@ docker exec -it crowdsec cscli bouncers add caddy-bouncer
 # Then set CROWDSEC_BOUNCER_KEY in .env and restart Caddy
 ```
 
-**Reset a local user's password** — bcrypt hash only (cost 10), update `caddy_config/portal/users.json`, then reload Caddy.
+**Reset a local user's password** — bcrypt hash only (cost 10), update `caddy_config/portal/users.json`, then restart Caddy (reload is rejected, see above).
 
 ## Critical Architecture Notes
 

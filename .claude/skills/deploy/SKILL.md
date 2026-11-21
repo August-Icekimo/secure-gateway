@@ -57,7 +57,7 @@ ssh icekimo@192.168.68.69 'cd /volume1/docker/secure-gateway && git pull --ff-on
 | `docker-compose.yml` | `ssh ... 'cd /volume1/docker/secure-gateway && docker compose up -d'` |
 | `crowdsec_config/*` | `docker --context syno restart crowdsec` |
 
-**為什麼用 restart 而非 reload**：git pull 會改變檔案 inode，容器內看到的仍是舊內容，`caddy reload` 會回報 `config is unchanged` 而沒有實際生效（詳見 Reload_SOP.md 的 inode 陷阱）。restart 強制重新掛載，只有幾秒中斷，是 git-pull 流程下唯一可靠的方式。
+**為什麼用 restart 而非 reload**：git pull 會改變檔案 inode，容器內看到的仍是舊內容，`caddy reload` 會回報 `config is unchanged` 而沒有實際生效（詳見 Reload_SOP.md 的 inode 陷阱）。restart 強制重新掛載，只有幾秒中斷，是 git-pull 流程下唯一可靠的方式。此外自 caddy-security v1.7.0 起 `caddy reload` 一律被拒（`identity file ... already belongs to a security runtime`，local identity store 不允許重疊 reload），所以只能 restart。
 
 **新增 env 變數（Caddyfile 出現新的 `{$VAR}`）的三步**——少一步就會 crash loop（鐵則 5）：
 1. 在 `docker-compose.yml` 的 caddy `environment:` 補上 `- VAR=${VAR}`（這份 commit 進 git）。
