@@ -12,7 +12,7 @@ RUN xcaddy build v2.11.9 \
     --with github.com/hslatman/caddy-crowdsec-bouncer/http@v0.14.1 \
     --with github.com/mholt/caddy-ratelimit@v0.1.0 \
     --with github.com/caddy-dns/route53@v1.6.3 \
-    --with github.com/greenpau/caddy-security@v1.1.64 \
+    --with github.com/greenpau/caddy-security@v1.7.0 \
     --replace github.com/mholt/caddy-l4=github.com/mholt/caddy-l4@v0.1.3
 
 # caddy-l4 不再以 --with 整套匯入（443 分流已交給 gateway-mux 的 haproxy，Caddyfile 無 layer4 設定），
