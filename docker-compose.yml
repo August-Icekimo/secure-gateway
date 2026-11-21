@@ -53,7 +53,7 @@ services:
  # --- 1b. Tailscale sidecar（提供 tailnet netns，讓 Caddy 連到 MLX 後端）---
  tailscale-gw:
    # 版本釘死（理由同 build/Dockerfile：浮動 tag 只會凍在本機快取，升級要有意識地改這裡再 compose pull）
-   image: tailscale/tailscale:v1.104.4
+   image: tailscale/tailscale:v1.104.7
    container_name: tailscale-gw
    hostname: secure-gateway-nas
    restart: unless-stopped
@@ -154,7 +154,7 @@ services:
  # Mint2Bee 的 sshd 看到的來源都是 NAS 的 tailnet IP：如果它有 fail2ban，被封的會是整條轉發。
  # 對外 port 開在 tailscale-gw 上（9822），新增或修改後要重建 tailscale-gw，Caddy 和 derper 會跟著重啟。
  mint2bee-relay:
-   image: alpine/socat:1.8.1.1
+   image: alpine/socat:1.8.1.3
    container_name: mint2bee-relay
    restart: unless-stopped
    network_mode: service:tailscale-gw
